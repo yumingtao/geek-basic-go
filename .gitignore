@@ -1,0 +1,31 @@
+# 忽略系统和编辑器生成的文件
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 忽略可执行文件
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# 忽略编译后的二进制文件和构建目录
+/bin/
+/pkg/
+/out/
+
+# 忽略依赖管理工具生成的目录
+/vendor/
+/go.sum
+
+# 忽略日志文件
+*.log
+
+# 忽略临时文件和缓存文件
+*.tmp
+*.bak
+*.cache
