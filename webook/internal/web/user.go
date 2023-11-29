@@ -2,33 +2,41 @@ package web
 
 import (
 	"errors"
+	"fmt"
 	"geek-basic-go/webook/internal/domain"
 	"geek-basic-go/webook/internal/service"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
+	"unicode/utf8"
 )
 
 const (
-	emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
-	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
+	emailRegexPattern     = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
+	passwordRegexPattern  = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
+	birthDateRegexPattern = `^(19|20)\d{2}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$`
+	nickNameMaxLen        = 20
+	personalProfileMaxLen = 150
 )
 
 // UserHandler
 // 所有和用户相关路由都定义在这个handler上
 // 用定义在UserHandler上的方法来作为路由的处理逻辑
 type UserHandler struct {
-	emailRexExp    *regexp.Regexp
-	passwordRexExp *regexp.Regexp
-	svc            *service.UserService
+	emailRexExp     *regexp.Regexp
+	passwordRexExp  *regexp.Regexp
+	birthDateRexExp *regexp.Regexp
+	svc             *service.UserService
 }
 
 func NewUserHandler(svc *service.UserService) *UserHandler {
 	return &UserHandler{
-		emailRexExp:    regexp.MustCompile(emailRegexPattern, regexp.None),
-		passwordRexExp: regexp.MustCompile(passwordRegexPattern, regexp.None),
-		svc:            svc,
+		emailRexExp:     regexp.MustCompile(emailRegexPattern, regexp.None),
+		passwordRexExp:  regexp.MustCompile(passwordRegexPattern, regexp.None),
+		birthDateRexExp: regexp.MustCompile(birthDateRegexPattern, regexp.None),
+		svc:             svc,
 	}
 }
 
@@ -134,9 +142,73 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 }
 
 func (h *UserHandler) Profile(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "这是profile")
+	paramId := ctx.Param("id")
+	id, err := strconv.ParseInt(paramId, 10, 64)
+	if err != nil {
+		ctx.String(http.StatusOK, "不是有效的用户id")
+		return
+	}
+	u, err := h.svc.Profile(ctx, id)
+	if err != nil {
+		ctx.String(http.StatusOK, err.Error())
+		return
+	}
+	ctx.JSON(http.StatusOK, u)
 }
 
 func (h *UserHandler) Edit(ctx *gin.Context) {
+	type EditReq struct {
+		NickName        string
+		BirthDate       string
+		PersonalProfile string
+	}
 
+	var req EditReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	if utf8.RuneCountInString(req.NickName) > nickNameMaxLen {
+		ctx.String(http.StatusOK, "昵称允许最大长度"+fmt.Sprintf("%d", nickNameMaxLen)+", 请重新输入。")
+		return
+	}
+	if utf8.RuneCountInString(req.PersonalProfile) > personalProfileMaxLen {
+		ctx.String(http.StatusOK, "个人简介允许最大长度"+fmt.Sprintf("%d", personalProfileMaxLen)+", 请重新输入。")
+		return
+	}
+	isBirthDate, err := h.birthDateRexExp.MatchString(req.BirthDate)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	if !isBirthDate {
+		ctx.String(http.StatusOK, "不是有效生日，请重新输入。")
+		return
+	}
+
+	paramId := ctx.Param("id")
+	id, err := strconv.ParseInt(paramId, 10, 64)
+	if err != nil {
+		ctx.String(http.StatusOK, "不是有效的用户id")
+		return
+	}
+	u, err := h.svc.Edit(ctx, domain.User{
+		Id:              id,
+		NickName:        req.NickName,
+		BirthDate:       req.BirthDate,
+		PersonalProfile: req.PersonalProfile,
+	})
+
+	switch {
+	case err == nil:
+		data := map[string]any{
+			"id":              u.Id,
+			"email":           u.Email,
+			"nickName":        u.NickName,
+			"birthDate":       u.BirthDate,
+			"personalProfile": u.PersonalProfile,
+		}
+		ctx.JSON(http.StatusOK, data)
+	default:
+		ctx.String(http.StatusOK, "系统错误！")
+	}
 }

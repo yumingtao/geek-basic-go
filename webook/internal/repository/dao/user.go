@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"errors"
+	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 	"time"
@@ -46,10 +47,31 @@ func (dao *UserDao) FindByEmail(ctx context.Context, email string) (User, error)
 	return u, err
 }
 
+func (dao *UserDao) FindById(ctx context.Context, id int64) (User, error) {
+	var u = User{Id: id}
+	err := dao.db.WithContext(ctx).First(&u).Error
+	return u, err
+}
+
+func (dao *UserDao) Update(ctx *gin.Context, user User) error {
+	// save会更新所有字段，即使字段是零值
+	//err := dao.db.Save(&user).Error
+	err := dao.db.WithContext(ctx).Model(&user).Updates(User{
+		NickName:        user.NickName,
+		BirthDate:       user.BirthDate,
+		PersonalProfile: user.PersonalProfile,
+		//UpdatedAt:       time.Now().UnixMilli(),
+	}).Error
+	return err
+}
+
 type User struct {
-	Id        int64  `gorm:"primaryKey,autoincrement"`
-	Email     string `gorm:"unique"`
-	Password  string
-	CreatedAt int64
-	UpdatedAt int64
+	Id              int64  `gorm:"primaryKey,autoincrement"`
+	Email           string `gorm:"unique"`
+	Password        string
+	NickName        string
+	BirthDate       string
+	PersonalProfile string
+	CreatedAt       int64
+	UpdatedAt       int64
 }
