@@ -7,7 +7,9 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"time"
 )
 
 const (
@@ -116,7 +118,7 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		sess := sessions.Default(ctx)
 		sess.Set("userId", u.Id)
 		sess.Options(sessions.Options{
-			MaxAge:   900,
+			MaxAge:   900, //15分钟
 			HttpOnly: true,
 			Secure:   true,
 		})
@@ -133,10 +135,51 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	}
 }
 
+func (h *UserHandler) LoginWithJwt(ctx *gin.Context) {
+	type LoginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	u, err := h.svc.Login(ctx, req.Email, req.Password)
+	switch {
+	case err == nil:
+		uc := UserClaims{
+			Uid: u.Id,
+			RegisteredClaims: jwt.RegisteredClaims{
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
+			},
+		}
+		token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
+		signedString, err := token.SignedString(JwtKey)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误！")
+			return
+		}
+		ctx.Header("X-Jwt-Token", signedString)
+		ctx.String(http.StatusOK, "恭喜，登录成功")
+	case errors.Is(err, service.ErrInvalidUserOrPassword):
+		ctx.String(http.StatusOK, "登录失败："+err.Error())
+	default:
+		ctx.String(http.StatusOK, "系统错误！")
+	}
+}
+
 func (h *UserHandler) Profile(ctx *gin.Context) {
+	//uc := ctx.MustGet("user").(UserClaims)
 	ctx.String(http.StatusOK, "这是profile")
 }
 
 func (h *UserHandler) Edit(ctx *gin.Context) {
 
+}
+
+var JwtKey = []byte("99c5468490C311Ee91Bb1A5958B90E3B")
+
+type UserClaims struct {
+	jwt.RegisteredClaims
+	Uid int64
 }
