@@ -33,6 +33,7 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 		authCode := ctx.GetHeader("Authorization")
 		if authCode == "" {
 			// 没有传token
+			log.Println("没有传token")
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -40,6 +41,7 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 		segs := strings.Split(authCode, " ")
 		if len(segs) != 2 {
 			// 没有按照bearer token格式
+			log.Println("bearer token格式不对")
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -51,12 +53,21 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 		})
 		if err != nil {
 			// token不对
+			log.Println("解析token报错")
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		if token == nil || !token.Valid {
 			// token 解析出来，但是非法/已过期
+			log.Println("token过期，请重新登录")
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		if uc.UserAgent != ctx.GetHeader("User-Agent") {
+			// 后期监控告警要埋点，进入这个分支的大概率是攻击者
+			log.Println("User-Agent不对")
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

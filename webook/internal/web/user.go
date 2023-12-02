@@ -8,6 +8,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
+	"log"
 	"net/http"
 	"time"
 )
@@ -42,7 +43,8 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	// 分组注册路由
 	ug := server.Group("/users")
 	ug.POST("", h.SignUp)
-	ug.POST("/login", h.Login)
+	//ug.POST("/login", h.Login)
+	ug.POST("/login", h.LoginWithJwt)
 	ug.GET("/:id", h.Profile)
 	ug.PUT("/:id", h.Edit)
 }
@@ -145,6 +147,8 @@ func (h *UserHandler) LoginWithJwt(ctx *gin.Context) {
 		return
 	}
 	u, err := h.svc.Login(ctx, req.Email, req.Password)
+	userAgent := ctx.GetHeader("User-Agent")
+	log.Println("User-Agent:", userAgent)
 	switch {
 	case err == nil:
 		uc := UserClaims{
@@ -152,6 +156,7 @@ func (h *UserHandler) LoginWithJwt(ctx *gin.Context) {
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
 			},
+			UserAgent: userAgent,
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
 		signedString, err := token.SignedString(JwtKey)
@@ -181,5 +186,6 @@ var JwtKey = []byte("99c5468490C311Ee91Bb1A5958B90E3B")
 
 type UserClaims struct {
 	jwt.RegisteredClaims
-	Uid int64
+	Uid       int64
+	UserAgent string
 }
