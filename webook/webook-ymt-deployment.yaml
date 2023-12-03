@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: webook-ymt-service
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: webook-ymt
@@ -19,7 +19,7 @@ spec:
         - name: webook-ymt
           image: yumingtao/webook:v0.0.1
           ports:
-            - containerPort: 8080
+            - containerPort: 8081
 
 
 

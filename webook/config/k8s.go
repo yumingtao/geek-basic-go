@@ -7,6 +7,6 @@ var Config = config{
 		DSN: "root:root@tcp(webook-ymt-mysql:13316)/webook?charset=utf8mb4&parseTime=True&loc=Local",
 	},
 	Redis: RedisConfig{
-		Addr: "webook-ymt-redis:6379",
+		Addr: "webook-ymt-redis:6380",
 	},
 }

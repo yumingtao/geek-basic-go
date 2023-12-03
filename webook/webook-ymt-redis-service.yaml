@@ -8,7 +8,7 @@ spec:
   ports:
     - protocol: TCP
       # k8s内部访问端口
-      port: 6379
+      port: 6380
       # 外部访问的端口，必须是30000-32767之间
       nodePort: 31379
       # pod 暴露的端口
