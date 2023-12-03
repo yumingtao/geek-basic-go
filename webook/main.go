@@ -7,12 +7,10 @@ import (
 	"geek-basic-go/webook/internal/service"
 	"geek-basic-go/webook/internal/web"
 	"geek-basic-go/webook/internal/web/middlewares/login"
-	"geek-basic-go/webook/pkg/ginx/middleware/ratelimit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	ginredis "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"net/http"
@@ -76,11 +74,14 @@ func initWebServer() *gin.Engine {
 		println("这个另一个middleware")
 	})
 
-	redisClient := redis.NewClient(&redis.Options{
-		//Addr: "localhost:6379",
-		Addr: config.Config.Redis.Addr,
-	})
-	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
+	// week-04 为了压测，去掉限流
+	/*
+		redisClient := redis.NewClient(&redis.Options{
+			//Addr: "localhost:6379",
+			Addr: config.Config.Redis.Addr,
+		})
+		server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
+	*/
 
 	//useSession(server)
 	useJwt(server)
