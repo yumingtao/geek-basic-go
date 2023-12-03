@@ -1,6 +1,7 @@
 package main
 
 import (
+	"geek-basic-go/webook/config"
 	"geek-basic-go/webook/internal/repository"
 	"geek-basic-go/webook/internal/repository/dao"
 	"geek-basic-go/webook/internal/service"
@@ -20,10 +21,10 @@ import (
 )
 
 func main() {
-	//db := initDB()
-	//server := initWebServer()
-	//initUserHdl(db, server)
-	server := gin.Default()
+	db := initDB()
+	server := initWebServer()
+	initUserHdl(db, server)
+	//server := gin.Default()
 	server.GET("/hello", func(context *gin.Context) {
 		// context核心职责：处理请求，返回响应
 		context.String(http.StatusOK, "Hello, World!")
@@ -76,7 +77,8 @@ func initWebServer() *gin.Engine {
 	})
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		//Addr: "localhost:6379",
+		Addr: config.Config.Redis.Addr,
 	})
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 
@@ -108,8 +110,10 @@ func useSession(server *gin.Engine) {
 }
 
 func initDB() *gorm.DB {
-	dsn := "root:root@tcp(127.0.0.1:13316)/webook?charset=utf8mb4&parseTime=True&loc=Local"
-	db, err := gorm.Open(mysql.Open(dsn))
+	//dsn := "root:root@tcp(127.0.0.1:13316)/webook?charset=utf8mb4&parseTime=True&loc=Local"
+	//db, err := gorm.Open(mysql.Open(dsn))
+	// 采用配置文件中的配置
+	db, err := gorm.Open(mysql.Open(config.Config.DB.DSN))
 	if err != nil {
 		panic(err)
 	}
