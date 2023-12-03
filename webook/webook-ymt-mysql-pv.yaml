@@ -1,0 +1,21 @@
+apiVersion: v1
+# 持久化卷，表达我是一个什么样的存储结构，是存储本身说我有什么特性，相当于现有资源
+# 而PersistentVolumeClaim是用的人告诉k8s，我需要什么特性，相当于是需求
+kind: PersistentVolume
+metadata:
+  name: webook-ymt-mysql-pv
+# pvc中声明了我需要哪些资源，pv里边声明了我有哪些资源
+spec:
+  # 这里的值一定要和pvc中的对应上
+  storageClassName: webook-ymt
+  capacity:
+    storage: 1Gi
+  # 本pv支持的访问模式
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    # 对应到本pv的哪个目录下
+    path: "/mnt/data"
+
+
+  

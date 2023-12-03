@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webook-ymt-redis
+  labels:
+    app: webook-ymt-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webook-ymt-redis
+  template:
+    metadata:
+      name: webook-ymt-redis
+      labels:
+        app: webook-ymt-redis
+    spec:
+      containers:
+        - name: webook-ymt-redis
+          image: redis:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6379
+      restartPolicy: Always
+      
