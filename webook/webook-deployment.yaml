@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webook-ymt-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: webook-ymt
+  template:
+    metadata:
+      labels:
+        # 一定要和前边selector中的matchLabels匹配
+        app: webook-ymt
+    # 这是Deployment管理的pod的模板
+    spec:
+      # Pod里运行的所有container
+      containers:
+        - name: webook-ymt
+          image: yumingtao/webook:v0.0.1
+          ports:
+            - containerPort: 8080
+
+
+
+
