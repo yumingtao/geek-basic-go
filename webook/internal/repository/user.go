@@ -4,6 +4,7 @@ import (
 	"context"
 	"geek-basic-go/webook/internal/domain"
 	"geek-basic-go/webook/internal/repository/dao"
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -40,8 +41,29 @@ func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (doma
 
 func (repo *UserRepository) toDomain(u dao.User) domain.User {
 	return domain.User{
-		Id:       u.Id,
-		Email:    u.Email,
-		Password: u.Password,
+		Id:              u.Id,
+		Email:           u.Email,
+		Password:        u.Password,
+		NickName:        u.NickName,
+		BirthDate:       u.BirthDate,
+		PersonalProfile: u.PersonalProfile,
 	}
+}
+
+func (repo *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
+	u, err := repo.dao.FindById(ctx, id)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return repo.toDomain(u), nil
+}
+
+func (repo *UserRepository) Update(ctx *gin.Context, u domain.User) error {
+	err := repo.dao.Update(ctx, dao.User{
+		Id:              u.Id,
+		NickName:        u.NickName,
+		BirthDate:       u.BirthDate,
+		PersonalProfile: u.PersonalProfile,
+	})
+	return err
 }
