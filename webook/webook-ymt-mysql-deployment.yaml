@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webook-ymt-mysql
+  labels:
+    app: webook-ymt-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webook-ymt-mysql
+  template:
+    metadata:
+      name: webook-ymt-mysql
+      labels:
+        app: webook-ymt-mysql
+    spec:
+      containers:
+        - name: webook-ymt-mysql
+          image: mysql:8.0.29
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root
+          ports:
+            - containerPort: 3306
+          imagePullPolicy: IfNotPresent
+          # 挂载到容器的哪个地方
+          volumeMounts:
+            # mysql数据的默认存储，容器中mysql在读写这个目录时，实际读写的是mysql-storage，而mysql-storage被webook-mysql-pvc声明了
+            - mountPath: /var/lib/mysql
+              name: mysql-storage
+      restartPolicy: Always
+      # 挂载的东西究竟是什么
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: webook-ymt-mysql-pvc

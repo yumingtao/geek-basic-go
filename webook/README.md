@@ -17,6 +17,21 @@
   - docker compose up: 初始化docker-compose并启动
   - docker compose down: 删除docker-compose里边创建的各种容器
 
+## K8s
+### ports
+![img.png](k8s-ports.png)
+### ingress
+![img.png](k8s-ingress.png)
+- ingress代表路由规则
+- service中的LoadBalancer强调的是将流量转发到pod上，ingress强调的是发到不同的service上
+### Ingress 和 Ingress Controller
+![img.png](k8s-ingress-vs-ingresscontroller.png)
+- Ingress Controller 可以控制整个集群内部符合条件的所有Ingress
+- Ingress是路由配置说明，而Ingress Controller是执行这些配置的
+
+### ingress-nginx
+- Ingress的nginx实现
+
 ## References
 - [kratos](https://go-kratos.dev/en/docs)
 - [go-zero](https://go-zero.dev/docs)
