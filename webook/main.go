@@ -22,6 +22,7 @@ import (
 
 func main() {
 	db := initDB()
+	db = db.Debug()
 	server := initWebServer()
 	initUserHdl(db, server)
 	//server := gin.Default()
