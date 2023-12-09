@@ -2,15 +2,15 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"geek-basic-go/webook/internal/domain"
 	"geek-basic-go/webook/internal/repository/cache"
 	"geek-basic-go/webook/internal/repository/dao"
-	"github.com/gin-gonic/gin"
 )
 
 var (
-	ErrDuplicateEmail = dao.ErrDuplicateEmail
-	ErrUserNotFound   = dao.ErrRecordNotFound
+	ErrDuplicateUser = dao.ErrDuplicateEmail
+	ErrUserNotFound  = dao.ErrRecordNotFound
 )
 
 // UserRepository
@@ -28,10 +28,7 @@ func NewUserRepository(dao *dao.UserDao, c *cache.UserCache) *UserRepository {
 }
 
 func (repo *UserRepository) Create(ctx context.Context, u domain.User) error {
-	err := repo.dao.Insert(ctx, dao.User{
-		Email:    u.Email,
-		Password: u.Password,
-	})
+	err := repo.dao.Insert(ctx, repo.toEntity(u))
 
 	return err
 }
@@ -47,11 +44,12 @@ func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (doma
 func (repo *UserRepository) toDomain(u dao.User) domain.User {
 	return domain.User{
 		Id:              u.Id,
-		Email:           u.Email,
+		Email:           u.Email.String,
 		Password:        u.Password,
 		NickName:        u.NickName,
 		BirthDate:       u.BirthDate,
 		PersonalProfile: u.PersonalProfile,
+		Phone:           u.Phone.String,
 	}
 }
 
@@ -112,7 +110,7 @@ func (repo *UserRepository) FindByIdV1(ctx context.Context, id int64) (domain.Us
 	}
 }
 
-func (repo *UserRepository) Update(ctx *gin.Context, u domain.User) error {
+func (repo *UserRepository) Update(ctx context.Context, u domain.User) error {
 	err := repo.dao.Update(ctx, dao.User{
 		Id:              u.Id,
 		NickName:        u.NickName,
@@ -120,4 +118,30 @@ func (repo *UserRepository) Update(ctx *gin.Context, u domain.User) error {
 		PersonalProfile: u.PersonalProfile,
 	})
 	return err
+}
+
+func (repo *UserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+	u, err := repo.dao.FindByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return repo.toDomain(u), nil
+}
+
+func (repo *UserRepository) toEntity(u domain.User) dao.User {
+	return dao.User{
+		Id: u.Id,
+		Email: sql.NullString{
+			String: u.Email,
+			Valid:  u.Email != "",
+		},
+		Password:        u.Password,
+		BirthDate:       u.BirthDate,
+		PersonalProfile: u.PersonalProfile,
+		NickName:        u.NickName,
+		Phone: sql.NullString{
+			String: u.Phone,
+			Valid:  u.Phone != "",
+		},
+	}
 }

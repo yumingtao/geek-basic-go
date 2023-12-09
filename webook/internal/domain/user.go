@@ -7,6 +7,7 @@ type User struct {
 	NickName        string
 	BirthDate       string
 	PersonalProfile string
+	Phone           string
 }
 
 // 按照DDD的原则，User password和email的校验应该放在这里

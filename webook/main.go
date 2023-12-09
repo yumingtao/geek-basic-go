@@ -3,14 +3,18 @@ package main
 import (
 	"geek-basic-go/webook/config"
 	"geek-basic-go/webook/internal/repository"
+	"geek-basic-go/webook/internal/repository/cache"
 	"geek-basic-go/webook/internal/repository/dao"
 	"geek-basic-go/webook/internal/service"
+	"geek-basic-go/webook/internal/service/sms"
+	"geek-basic-go/webook/internal/service/sms/localsms"
 	"geek-basic-go/webook/internal/web"
 	"geek-basic-go/webook/internal/web/middlewares/login"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	ginredis "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"net/http"
@@ -21,8 +25,12 @@ import (
 func main() {
 	db := initDB()
 	db = db.Debug()
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: config.Config.Redis.Addr,
+	})
 	server := initWebServer()
-	initUserHdl(db, server)
+	codeSvc := initCodeSvc(redisClient)
+	initUserHdl(db, redisClient, codeSvc, server)
 	//server := gin.Default()
 	server.GET("/hello", func(context *gin.Context) {
 		// context核心职责：处理请求，返回响应
@@ -34,13 +42,14 @@ func main() {
 	}
 }
 
-func initUserHdl(db *gorm.DB, server *gin.Engine) {
+func initUserHdl(db *gorm.DB, redisClient redis.Cmdable, codeSvc *service.CodeService, server *gin.Engine) {
 	ud := dao.NewUserDao(db)
-	ur := repository.NewUserRepository(ud)
+	uc := cache.NewUserCache(redisClient)
+	ur := repository.NewUserRepository(ud, uc)
 	us := service.NewUserService(ur)
 
 	//hdl := &user.UserHandler{}
-	hdl := web.NewUserHandler(us)
+	hdl := web.NewUserHandler(us, codeSvc)
 	// 分散注册
 	// 优点：比较有条理 缺点：找路由的时候不好找
 	hdl.RegisterRoutes(server)
@@ -48,6 +57,16 @@ func initUserHdl(db *gorm.DB, server *gin.Engine) {
 	// 集中注册
 	// 优点：在一个文件中能够看到全部路由 缺点：路由太多找起来费劲
 	// registerRoutes(server, hdl)
+}
+
+func initCodeSvc(redisClient redis.Cmdable) *service.CodeService {
+	cc := cache.NewCodeCache(redisClient)
+	crepo := repository.NewCodeRepository(cc)
+	return service.NewCodeService(crepo, initMemorySms())
+}
+
+func initMemorySms() sms.Service {
+	return localsms.NewService()
 }
 
 func initWebServer() *gin.Engine {

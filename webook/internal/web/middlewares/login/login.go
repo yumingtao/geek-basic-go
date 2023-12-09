@@ -17,7 +17,7 @@ func (m *MiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 	gob.Register(time.Now())
 	return func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
-		if path == "/users/login" {
+		if path == "/users/login" || path == "/users/login/sms/code" || path == "/users/login/sms" {
 			// 登录不需要校验
 			println("登录不需要校验")
 			return

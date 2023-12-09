@@ -6,9 +6,16 @@ import (
 )
 
 var ErrCodeVerifyTooMany = cache.ErrVerifyCodeTooMany
+var ErrorCodeSentTooMany = cache.ErrCodeSendTooMany
 
 type CodeRepository struct {
-	cache cache.CodeCache
+	cache *cache.CodeCache
+}
+
+func NewCodeRepository(c *cache.CodeCache) *CodeRepository {
+	return &CodeRepository{
+		cache: c,
+	}
 }
 
 func (c *CodeRepository) Set(ctx context.Context, biz, phone, code string) error {
