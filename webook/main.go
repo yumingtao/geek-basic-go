@@ -102,7 +102,7 @@ func useSession(server *gin.Engine) {
 	// 数据安全的三个核心概念：身份认证，数据加密，授权（权限控制）
 	//store := memstore.NewStore([]byte("ef9a6efa89E711Ee91Bb1A5958B90E3A"), []byte("99c5468490C311Ee91Bb1A5958B90E3A"))
 	// 基于redis的实现
-	store, err := ginredis.NewStore(16, "tcp", "localhost:6379", "",
+	store, err := ginredis.NewStore(16, "tcp", config.Config.Redis.Addr, "",
 		[]byte("ef9a6efa89E711Ee91Bb1A5958B90E3A"), []byte("99c5468490C311Ee91Bb1A5958B90E3A"))
 	if err != nil {
 		panic(err)

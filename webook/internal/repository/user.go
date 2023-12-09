@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"geek-basic-go/webook/internal/domain"
+	"geek-basic-go/webook/internal/repository/cache"
 	"geek-basic-go/webook/internal/repository/dao"
 	"github.com/gin-gonic/gin"
 )
@@ -12,13 +13,17 @@ var (
 	ErrUserNotFound   = dao.ErrRecordNotFound
 )
 
+// UserRepository
+// Repository 负责操作数据，当然包括操作数据库也包括缓存
 type UserRepository struct {
-	dao *dao.UserDao
+	dao   *dao.UserDao
+	cache *cache.UserCache
 }
 
-func NewUserRepository(dao *dao.UserDao) *UserRepository {
+func NewUserRepository(dao *dao.UserDao, c *cache.UserCache) *UserRepository {
 	return &UserRepository{
-		dao: dao,
+		dao:   dao,
+		cache: c,
 	}
 }
 
@@ -51,11 +56,60 @@ func (repo *UserRepository) toDomain(u dao.User) domain.User {
 }
 
 func (repo *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
+	du, err := repo.cache.Get(ctx, id)
+	if err != nil {
+		return du, err
+	}
 	u, err := repo.dao.FindById(ctx, id)
 	if err != nil {
 		return domain.User{}, err
 	}
-	return repo.toDomain(u), nil
+	du = repo.toDomain(u)
+	err = repo.cache.Set(ctx, du)
+	if err != nil {
+		// 网络崩了，redis崩了
+		return domain.User{}, err
+	}
+	// 可以使用goroutine异步些缓存
+	/*go func() {
+		err = repo.cache.Set(ctx, du)
+		if err != nil {
+			log.Println(err)
+		}
+	}()*/
+	return du, nil
+}
+
+func (repo *UserRepository) FindByIdV1(ctx context.Context, id int64) (domain.User, error) {
+	du, err := repo.cache.Get(ctx, id)
+
+	switch err {
+	case nil:
+		return du, err
+	case cache.ErrKeyInexist:
+		// key不存在去查询数据库
+		u, err := repo.dao.FindById(ctx, id)
+		if err != nil {
+			return domain.User{}, err
+		}
+		du = repo.toDomain(u)
+		err = repo.cache.Set(ctx, du)
+		if err != nil {
+			// 网络崩了，redis崩了
+			return domain.User{}, err
+		}
+		// 可以使用goroutine异步些缓存
+		/*go func() {
+			err = repo.cache.Set(ctx, du)
+			if err != nil {
+				log.Println(err)
+			}
+		}()*/
+		return du, nil
+	default:
+		// 接近降级的写法
+		return domain.User{}, err
+	}
 }
 
 func (repo *UserRepository) Update(ctx *gin.Context, u domain.User) error {
