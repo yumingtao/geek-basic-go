@@ -19,7 +19,7 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 	gob.Register(time.Now())
 	return func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
-		if path == "/users/login" {
+		if path == "/users/login" || path == "/users/login/sms/code" || path == "/users/login/sms" {
 			// 登录不需要校验
 			println("登录不需要校验")
 			return
@@ -78,9 +78,10 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}*/
-		// 剩余过期时间小于50s就需要刷新
+		// week-03 剩余过期时间小于50s就需要刷新
+		// week-04 压测时，过期时间设置30分钟
 		if expireTime.Sub(time.Now()) < time.Second*50 {
-			uc.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute))
+			uc.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 30))
 			tokenStr, err := token.SignedString(web.JwtKey)
 			ctx.Header("X-Jwt-Token", tokenStr)
 			if err != nil {

@@ -3,11 +3,13 @@ package main
 import (
 	"geek-basic-go/webook/config"
 	"geek-basic-go/webook/internal/repository"
+	"geek-basic-go/webook/internal/repository/cache"
 	"geek-basic-go/webook/internal/repository/dao"
 	"geek-basic-go/webook/internal/service"
+	"geek-basic-go/webook/internal/service/sms"
+	"geek-basic-go/webook/internal/service/sms/localsms"
 	"geek-basic-go/webook/internal/web"
 	"geek-basic-go/webook/internal/web/middlewares/login"
-	"geek-basic-go/webook/pkg/ginx/middleware/ratelimit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	ginredis "github.com/gin-contrib/sessions/redis"
@@ -21,10 +23,27 @@ import (
 )
 
 func main() {
+	server := InitWebServer()
+	server.GET("/hello", func(context *gin.Context) {
+		// context核心职责：处理请求，返回响应
+		context.String(http.StatusOK, "Hello, World!")
+	})
+	err := server.Run(":8080")
+	if err != nil {
+		return
+	}
+}
+
+// =========使用wire重构完代码之后，以下代码都用不上了===================
+func mainV1() {
 	db := initDB()
 	db = db.Debug()
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: config.Config.Redis.Addr,
+	})
 	server := initWebServer()
-	initUserHdl(db, server)
+	codeSvc := initCodeSvc(redisClient)
+	initUserHdl(db, redisClient, codeSvc, server)
 	//server := gin.Default()
 	server.GET("/hello", func(context *gin.Context) {
 		// context核心职责：处理请求，返回响应
@@ -36,13 +55,14 @@ func main() {
 	}
 }
 
-func initUserHdl(db *gorm.DB, server *gin.Engine) {
+func initUserHdl(db *gorm.DB, redisClient redis.Cmdable, codeSvc service.CodeService, server *gin.Engine) {
 	ud := dao.NewUserDao(db)
-	ur := repository.NewUserRepository(ud)
+	uc := cache.NewUserCache(redisClient)
+	ur := repository.NewCachedUserRepository(ud, uc)
 	us := service.NewUserService(ur)
 
 	//hdl := &user.UserHandler{}
-	hdl := web.NewUserHandler(us)
+	hdl := web.NewUserHandler(us, codeSvc)
 	// 分散注册
 	// 优点：比较有条理 缺点：找路由的时候不好找
 	hdl.RegisterRoutes(server)
@@ -50,6 +70,16 @@ func initUserHdl(db *gorm.DB, server *gin.Engine) {
 	// 集中注册
 	// 优点：在一个文件中能够看到全部路由 缺点：路由太多找起来费劲
 	// registerRoutes(server, hdl)
+}
+
+func initCodeSvc(redisClient redis.Cmdable) service.CodeService {
+	cc := cache.NewCodeCache(redisClient)
+	crepo := repository.NewCachedCodeRepository(cc)
+	return service.NewCodeService(crepo, initMemorySms())
+}
+
+func initMemorySms() sms.Service {
+	return localsms.NewService()
 }
 
 func initWebServer() *gin.Engine {
@@ -77,11 +107,14 @@ func initWebServer() *gin.Engine {
 		println("这个另一个middleware")
 	})
 
-	redisClient := redis.NewClient(&redis.Options{
-		//Addr: "localhost:6379",
-		Addr: config.Config.Redis.Addr,
-	})
-	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
+	// week-04 为了压测，去掉限流
+	/*
+		redisClient := redis.NewClient(&redis.Options{
+			//Addr: "localhost:6379",
+			Addr: config.Config.Redis.Addr,
+		})
+		server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
+	*/
 
 	//useSession(server)
 	useJwt(server)
@@ -101,7 +134,7 @@ func useSession(server *gin.Engine) {
 	// 数据安全的三个核心概念：身份认证，数据加密，授权（权限控制）
 	//store := memstore.NewStore([]byte("ef9a6efa89E711Ee91Bb1A5958B90E3A"), []byte("99c5468490C311Ee91Bb1A5958B90E3A"))
 	// 基于redis的实现
-	store, err := ginredis.NewStore(16, "tcp", "localhost:6379", "",
+	store, err := ginredis.NewStore(16, "tcp", config.Config.Redis.Addr, "",
 		[]byte("ef9a6efa89E711Ee91Bb1A5958B90E3A"), []byte("99c5468490C311Ee91Bb1A5958B90E3A"))
 	if err != nil {
 		panic(err)
@@ -131,4 +164,6 @@ func registerRoutes(server *gin.Engine, hdl *web.UserHandler) {
 	server.POST("/users/login", hdl.LoginWithJwt)
 	server.GET("/users/:id", hdl.Profile)
 	server.PUT("/users/:id", hdl.Edit)
+	server.POST("/login/sms/code", hdl.SendSmsLoginCode)
+	server.POST("/login/sms", hdl.VerifySmsCode)
 }
