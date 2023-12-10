@@ -73,7 +73,7 @@ func initUserHdl(db *gorm.DB, redisClient redis.Cmdable, codeSvc service.CodeSer
 }
 
 func initCodeSvc(redisClient redis.Cmdable) service.CodeService {
-	cc := cache.NewCodeCache(redisClient)
+	cc := cache.NewRedisCodeCache(redisClient)
 	crepo := repository.NewCachedCodeRepository(cc)
 	return service.NewCodeService(crepo, initMemorySms())
 }
