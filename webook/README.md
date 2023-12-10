@@ -32,6 +32,20 @@
 ### ingress-nginx
 - Ingress的nginx实现
 
+### wire
+#### 缺点
+- 缺乏根据不同环境使用不同实现的能力
+- 缺乏根据接口查找实现的能力
+- 缺乏根据类型查找所有实现的能力
+
+#### 优点
+- 使代码清晰，可控性强
+
 ## References
 - [kratos](https://go-kratos.dev/en/docs)
 - [go-zero](https://go-zero.dev/docs)
+- [ekit](https://github.com/ecodeclub/ekit)
+- [Tencent SMS](https://cloud.tencent.com/document/product/382/43199)
+- [gin](https://github.com/gin-gonic/gin)
+- [gorm](https://github.com/go-gorm/gorm)
+- [wire](https://github.com/google/wire)

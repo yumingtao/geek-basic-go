@@ -23,14 +23,16 @@ import (
 )
 
 func main() {
-	db := initDB()
+	server := InitWebServer()
+	// 以下都不需要，换成wire
+	/*db := initDB()
 	db = db.Debug()
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: config.Config.Redis.Addr,
 	})
 	server := initWebServer()
 	codeSvc := initCodeSvc(redisClient)
-	initUserHdl(db, redisClient, codeSvc, server)
+	initUserHdl(db, redisClient, codeSvc, server)*/
 	//server := gin.Default()
 	server.GET("/hello", func(context *gin.Context) {
 		// context核心职责：处理请求，返回响应
@@ -151,4 +153,6 @@ func registerRoutes(server *gin.Engine, hdl *web.UserHandler) {
 	server.POST("/users/login", hdl.LoginWithJwt)
 	server.GET("/users/:id", hdl.Profile)
 	server.PUT("/users/:id", hdl.Edit)
+	server.POST("/login/sms/code", hdl.SendSmsLoginCode)
+	server.POST("/login/sms", hdl.VerifySmsCode)
 }
