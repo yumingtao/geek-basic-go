@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var ErrKeyInexist = redis.Nil
+var ErrKeyNotExist = redis.Nil
 
 // UserCache
 // 引入专门的UserCache:

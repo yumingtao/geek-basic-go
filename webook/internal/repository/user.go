@@ -84,7 +84,7 @@ func (repo *UserRepository) FindByIdV1(ctx context.Context, id int64) (domain.Us
 	switch err {
 	case nil:
 		return du, err
-	case cache.ErrKeyInexist:
+	case cache.ErrKeyNotExist:
 		// key不存在去查询数据库
 		u, err := repo.dao.FindById(ctx, id)
 		if err != nil {
