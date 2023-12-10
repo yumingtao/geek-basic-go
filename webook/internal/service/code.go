@@ -11,19 +11,24 @@ import (
 
 var ErrCodeSentTooMany = repository.ErrorCodeSentTooMany
 
-type CodeService struct {
-	repo *repository.CodeRepository
+type CodeService interface {
+	Send(ctx context.Context, biz string, phone string) error
+	Verify(ctx context.Context, biz, phone, inputCode string) (bool, error)
+}
+
+type CodeServiceImpl struct {
+	repo repository.CodeRepository
 	sms  sms.Service
 }
 
-func NewCodeService(repo *repository.CodeRepository, smsSvc sms.Service) *CodeService {
-	return &CodeService{
+func NewCodeService(repo repository.CodeRepository, smsSvc sms.Service) CodeService {
+	return &CodeServiceImpl{
 		repo: repo,
 		sms:  smsSvc,
 	}
 }
 
-func (svc *CodeService) Send(ctx context.Context, biz string, phone string) error {
+func (svc *CodeServiceImpl) Send(ctx context.Context, biz string, phone string) error {
 	code := svc.generate()
 	err := svc.repo.Set(ctx, biz, phone, code)
 	// 开始发送验证码
@@ -34,7 +39,7 @@ func (svc *CodeService) Send(ctx context.Context, biz string, phone string) erro
 	return svc.sms.Send(ctx, codeTplId, []string{code}, phone)
 }
 
-func (svc *CodeService) Verify(ctx context.Context, biz, phone, inputCode string) (bool, error) {
+func (svc *CodeServiceImpl) Verify(ctx context.Context, biz, phone, inputCode string) (bool, error) {
 
 	ok, err := svc.repo.Verify(ctx, biz, phone, inputCode)
 	if errors.Is(err, repository.ErrCodeVerifyTooMany) {
@@ -44,7 +49,7 @@ func (svc *CodeService) Verify(ctx context.Context, biz, phone, inputCode string
 	return ok, nil
 }
 
-func (svc *CodeService) generate() string {
+func (svc *CodeServiceImpl) generate() string {
 	code := rand.Intn(1000000)
 	return fmt.Sprintf("%06d", code)
 }

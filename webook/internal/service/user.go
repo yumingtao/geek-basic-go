@@ -14,17 +14,25 @@ var (
 	ErrUserNotFound          = errors.New("用户不存在! ")
 )
 
-type UserService struct {
-	repo *repository.UserRepository
+type UserService interface {
+	SignUp(ctx context.Context, u domain.User) error
+	Login(ctx context.Context, email string, password string) (domain.User, error)
+	Edit(ctx context.Context, u domain.User) (domain.User, error)
+	Profile(ctx context.Context, id int64) (domain.User, error)
+	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 }
 
-func NewUserService(repo *repository.UserRepository) *UserService {
-	return &UserService{
+type UserServiceImpl struct {
+	repo repository.UserRepository
+}
+
+func NewUserService(repo repository.UserRepository) UserService {
+	return &UserServiceImpl{
 		repo: repo,
 	}
 }
 
-func (scv *UserService) SignUp(ctx context.Context, u domain.User) error {
+func (scv *UserServiceImpl) SignUp(ctx context.Context, u domain.User) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -33,7 +41,7 @@ func (scv *UserService) SignUp(ctx context.Context, u domain.User) error {
 	return scv.repo.Create(ctx, u)
 }
 
-func (scv *UserService) Login(ctx context.Context, email string, password string) (domain.User, error) {
+func (scv *UserServiceImpl) Login(ctx context.Context, email string, password string) (domain.User, error) {
 	u, err := scv.repo.FindByEmail(ctx, email)
 	if errors.Is(err, repository.ErrUserNotFound) {
 		return domain.User{}, ErrInvalidUserOrPassword
@@ -49,7 +57,7 @@ func (scv *UserService) Login(ctx context.Context, email string, password string
 	return u, nil
 }
 
-func (scv *UserService) Edit(ctx context.Context, u domain.User) (domain.User, error) {
+func (scv *UserServiceImpl) Edit(ctx context.Context, u domain.User) (domain.User, error) {
 	_, err := scv.repo.FindById(ctx, u.Id)
 	if errors.Is(err, repository.ErrUserNotFound) {
 		return domain.User{}, ErrUserNotFound
@@ -69,7 +77,7 @@ func (scv *UserService) Edit(ctx context.Context, u domain.User) (domain.User, e
 	return nu, err
 }
 
-func (scv *UserService) Profile(ctx context.Context, id int64) (domain.User, error) {
+func (scv *UserServiceImpl) Profile(ctx context.Context, id int64) (domain.User, error) {
 	u, err := scv.repo.FindById(ctx, id)
 	if errors.Is(err, repository.ErrUserNotFound) {
 		return domain.User{}, ErrUserNotFound
@@ -80,7 +88,7 @@ func (scv *UserService) Profile(ctx context.Context, id int64) (domain.User, err
 	return u, nil
 }
 
-func (scv *UserService) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
+func (scv *UserServiceImpl) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
 	// 认为大部分用户是已存在用户
 	u, err := scv.repo.FindByPhone(ctx, phone)
 	if err != repository.ErrUserNotFound {

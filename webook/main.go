@@ -24,15 +24,26 @@ import (
 
 func main() {
 	server := InitWebServer()
-	// 以下都不需要，换成wire
-	/*db := initDB()
+	server.GET("/hello", func(context *gin.Context) {
+		// context核心职责：处理请求，返回响应
+		context.String(http.StatusOK, "Hello, World!")
+	})
+	err := server.Run(":8080")
+	if err != nil {
+		return
+	}
+}
+
+// =========使用wire重构完代码之后，以下代码都用不上了===================
+func mainV1() {
+	db := initDB()
 	db = db.Debug()
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: config.Config.Redis.Addr,
 	})
 	server := initWebServer()
 	codeSvc := initCodeSvc(redisClient)
-	initUserHdl(db, redisClient, codeSvc, server)*/
+	initUserHdl(db, redisClient, codeSvc, server)
 	//server := gin.Default()
 	server.GET("/hello", func(context *gin.Context) {
 		// context核心职责：处理请求，返回响应
@@ -44,10 +55,10 @@ func main() {
 	}
 }
 
-func initUserHdl(db *gorm.DB, redisClient redis.Cmdable, codeSvc *service.CodeService, server *gin.Engine) {
+func initUserHdl(db *gorm.DB, redisClient redis.Cmdable, codeSvc service.CodeService, server *gin.Engine) {
 	ud := dao.NewUserDao(db)
 	uc := cache.NewUserCache(redisClient)
-	ur := repository.NewUserRepository(ud, uc)
+	ur := repository.NewCachedUserRepository(ud, uc)
 	us := service.NewUserService(ur)
 
 	//hdl := &user.UserHandler{}
@@ -61,9 +72,9 @@ func initUserHdl(db *gorm.DB, redisClient redis.Cmdable, codeSvc *service.CodeSe
 	// registerRoutes(server, hdl)
 }
 
-func initCodeSvc(redisClient redis.Cmdable) *service.CodeService {
+func initCodeSvc(redisClient redis.Cmdable) service.CodeService {
 	cc := cache.NewCodeCache(redisClient)
-	crepo := repository.NewCodeRepository(cc)
+	crepo := repository.NewCachedCodeRepository(cc)
 	return service.NewCodeService(crepo, initMemorySms())
 }
 

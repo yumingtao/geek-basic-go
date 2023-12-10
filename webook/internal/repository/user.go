@@ -13,27 +13,35 @@ var (
 	ErrUserNotFound  = dao.ErrRecordNotFound
 )
 
-// UserRepository
-// Repository 负责操作数据，当然包括操作数据库也包括缓存
-type UserRepository struct {
-	dao   *dao.UserDao
-	cache *cache.UserCache
+type UserRepository interface {
+	Create(ctx context.Context, u domain.User) error
+	FindByEmail(ctx context.Context, email string) (domain.User, error)
+	FindById(ctx context.Context, id int64) (domain.User, error)
+	Update(ctx context.Context, u domain.User) error
+	FindByPhone(ctx context.Context, phone string) (domain.User, error)
 }
 
-func NewUserRepository(dao *dao.UserDao, c *cache.UserCache) *UserRepository {
-	return &UserRepository{
+// CachedUserRepository
+// Repository 负责操作数据，当然包括操作数据库也包括缓存
+type CachedUserRepository struct {
+	dao   dao.UserDao
+	cache cache.UserCache
+}
+
+func NewCachedUserRepository(dao dao.UserDao, c cache.UserCache) UserRepository {
+	return &CachedUserRepository{
 		dao:   dao,
 		cache: c,
 	}
 }
 
-func (repo *UserRepository) Create(ctx context.Context, u domain.User) error {
+func (repo *CachedUserRepository) Create(ctx context.Context, u domain.User) error {
 	err := repo.dao.Insert(ctx, repo.toEntity(u))
 
 	return err
 }
 
-func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
+func (repo *CachedUserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
 	u, err := repo.dao.FindByEmail(ctx, email)
 	if err != nil {
 		return domain.User{}, err
@@ -41,7 +49,7 @@ func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (doma
 	return repo.toDomain(u), nil
 }
 
-func (repo *UserRepository) toDomain(u dao.User) domain.User {
+func (repo *CachedUserRepository) toDomain(u dao.User) domain.User {
 	return domain.User{
 		Id:              u.Id,
 		Email:           u.Email.String,
@@ -53,7 +61,7 @@ func (repo *UserRepository) toDomain(u dao.User) domain.User {
 	}
 }
 
-func (repo *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
+func (repo *CachedUserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
 	du, err := repo.cache.Get(ctx, id)
 	if err != nil {
 		return du, err
@@ -78,7 +86,7 @@ func (repo *UserRepository) FindById(ctx context.Context, id int64) (domain.User
 	return du, nil
 }
 
-func (repo *UserRepository) FindByIdV1(ctx context.Context, id int64) (domain.User, error) {
+func (repo *CachedUserRepository) FindByIdV1(ctx context.Context, id int64) (domain.User, error) {
 	du, err := repo.cache.Get(ctx, id)
 
 	switch err {
@@ -110,7 +118,7 @@ func (repo *UserRepository) FindByIdV1(ctx context.Context, id int64) (domain.Us
 	}
 }
 
-func (repo *UserRepository) Update(ctx context.Context, u domain.User) error {
+func (repo *CachedUserRepository) Update(ctx context.Context, u domain.User) error {
 	err := repo.dao.Update(ctx, dao.User{
 		Id:              u.Id,
 		NickName:        u.NickName,
@@ -120,7 +128,7 @@ func (repo *UserRepository) Update(ctx context.Context, u domain.User) error {
 	return err
 }
 
-func (repo *UserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+func (repo *CachedUserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
 	u, err := repo.dao.FindByPhone(ctx, phone)
 	if err != nil {
 		return domain.User{}, err
@@ -128,7 +136,7 @@ func (repo *UserRepository) FindByPhone(ctx context.Context, phone string) (doma
 	return repo.toDomain(u), nil
 }
 
-func (repo *UserRepository) toEntity(u domain.User) dao.User {
+func (repo *CachedUserRepository) toEntity(u domain.User) dao.User {
 	return dao.User{
 		Id: u.Id,
 		Email: sql.NullString{

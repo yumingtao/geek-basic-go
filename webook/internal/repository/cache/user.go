@@ -11,18 +11,23 @@ import (
 
 var ErrKeyNotExist = redis.Nil
 
-// UserCache
+type UserCache interface {
+	Get(ctx context.Context, id int64) (domain.User, error)
+	Set(ctx context.Context, du domain.User) error
+}
+
+// RedisUserCache
 // 引入专门的UserCache:
 // 1. 屏蔽过期时间设置问题：使用UserCache的人不再需要关心过期时间问题
 // 2. 屏蔽key的结构，缓存调用者不用知道缓存里边这个key的结构是怎么组成的
 // 3. 屏蔽序列化与反序列协议
-type UserCache struct {
+type RedisUserCache struct {
 	// Cmdable有很多不同的实现，单机的，集群的
 	cmd        redis.Cmdable
 	expiration time.Duration
 }
 
-func (c *UserCache) Get(ctx context.Context, id int64) (domain.User, error) {
+func (c *RedisUserCache) Get(ctx context.Context, id int64) (domain.User, error) {
 	key := c.key(id)
 	data, err := c.cmd.Get(ctx, key).Result()
 	if err != nil {
@@ -37,11 +42,11 @@ func (c *UserCache) Get(ctx context.Context, id int64) (domain.User, error) {
 	return u, err
 }
 
-func (c *UserCache) key(id int64) string {
+func (c *RedisUserCache) key(id int64) string {
 	return fmt.Sprintf("user:info:%d", id)
 }
 
-func (c *UserCache) Set(ctx context.Context, du domain.User) error {
+func (c *RedisUserCache) Set(ctx context.Context, du domain.User) error {
 	key := c.key(du.Id)
 	// 序列化：将结构体转换为字节切片[]byte
 	data, err := json.Marshal(du)
@@ -51,8 +56,8 @@ func (c *UserCache) Set(ctx context.Context, du domain.User) error {
 	return c.cmd.Set(ctx, key, data, c.expiration).Err()
 }
 
-func NewUserCache(cmd redis.Cmdable) *UserCache {
-	return &UserCache{
+func NewUserCache(cmd redis.Cmdable) UserCache {
+	return &RedisUserCache{
 		cmd:        cmd,
 		expiration: time.Minute * 15,
 	}
@@ -65,9 +70,9 @@ type UserCacheV1 struct {
 
 // NewUserCacheV1
 // 一定不要自己去初始化程序需要的东西，让外边传进来
-func NewUserCacheV1(addr string) *UserCache {
+func NewUserCacheV1(addr string) *RedisUserCache {
 	cmd := redis.NewClient(&redis.Options{Addr: addr})
-	return &UserCache{
+	return &RedisUserCache{
 		cmd:        cmd,
 		expiration: time.Minute * 15,
 	}

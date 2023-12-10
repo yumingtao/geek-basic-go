@@ -33,13 +33,17 @@
 - Ingress的nginx实现
 
 ### wire
-#### 缺点
+#### Disadvantage
 - 缺乏根据不同环境使用不同实现的能力
 - 缺乏根据接口查找实现的能力
 - 缺乏根据类型查找所有实现的能力
 
-#### 优点
+#### Advantage
 - 使代码清晰，可控性强
+
+#### Notes
+- 使用wire时初始化方法最好返回接口类型，这样wire可以直接使用类型匹配，不然需要使用wire的Bind方法去绑定
+- **但是Go推荐返回具体类型，和wire有冲突**
 
 ## References
 - [kratos](https://go-kratos.dev/en/docs)
