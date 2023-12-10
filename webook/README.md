@@ -45,6 +45,13 @@
 - 使用wire时初始化方法最好返回接口类型，这样wire可以直接使用类型匹配，不然需要使用wire的Bind方法去绑定
 - **但是Go推荐返回具体类型，和wire有冲突**
 
+## Notes
+- 识别业务变化点，超前设计但不超前实现
+- 识别变化点
+  - 任何第三方工具，都存在替换可能
+  - 业务流程中不太合理的地方
+  - 核心逻辑一定要面向接口编程
+
 ## References
 - [kratos](https://go-kratos.dev/en/docs)
 - [go-zero](https://go-zero.dev/docs)
