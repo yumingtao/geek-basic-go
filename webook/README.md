@@ -67,6 +67,20 @@
 - 单元测试：根据代码，最起码做到分支覆盖，覆盖率80%或85%
 - 集成测试：根据业务场景，至少覆盖业务主要正常流程和主要异常流程
 
+### Mock Tools
+#### gomock
+- mockgen: 命令行工具,可以为接口生成mock实现
+  - 安装：go install go.uber.org/mock/mockgen@latest
+  - go install 会安装到GOPATH/bin
+  - 参数：
+    - source: 源文件名
+    - destination: 目标文件名
+    - package: 生成的go文件的package name
+  - 根目录下运行
+    - mockgen -source=./webook/internal/service/user.go -package=svcmocks -destination=./webook/internal/service/mocks/user.mock.go
+- 测试中使用控制mock对象的包
+- [gomock](https://github.com/uber-go/mock)
+
 ## Notes
 - 识别业务变化点，超前设计但不超前实现
 - 识别变化点
