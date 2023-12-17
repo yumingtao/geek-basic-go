@@ -81,6 +81,14 @@
 - 测试中使用控制mock对象的包
 - [gomock](https://github.com/uber-go/mock)
 
+#### sqlmock
+- [go-sqlmock](https://github.com/DATA-DOG/go-sqlmock)
+- 由于dao依赖的gorm.DB和sql driver(sql.go)使用的是结构体，没有接口，所以不能通过gomock进行mock
+- 基本用法
+  - 用sqlmock创建一个db
+  - 设置模拟调用
+  - 使用db来测试代码：即本代码中让gorm使用这个db，相当于用的mock的数据库驱动
+
 ## Notes
 - 识别业务变化点，超前设计但不超前实现
 - 识别变化点
@@ -96,3 +104,5 @@
 - [gin](https://github.com/gin-gonic/gin)
 - [gorm](https://github.com/go-gorm/gorm)
 - [wire](https://github.com/google/wire)
+- [gomock](https://github.com/uber-go/mock)
+- [go-sqlmock](https://github.com/DATA-DOG/go-sqlmock)
