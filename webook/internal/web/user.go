@@ -22,7 +22,7 @@ const (
 	birthDateRegexPattern = `^(19|20)\d{2}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$`
 	nickNameMaxLen        = 20
 	personalProfileMaxLen = 150
-	bizLogin              = "Login"
+	bizLogin              = "login"
 )
 
 // UserHandler
@@ -97,7 +97,8 @@ func (h *UserHandler) SendSmsLoginCode(ctx *gin.Context) {
 			Code: 5,
 			Msg:  "系统错误",
 		})
-		// 补日志
+		// 打印日志
+		log.Println(err)
 	}
 }
 
