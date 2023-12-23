@@ -11,6 +11,8 @@ import (
 )
 
 func InitSmsService() sms.Service {
+	// 如何使用装饰器
+	//return ratelimit.NewLimitSmsService(localsms.NewService(), limiter.NewRedisSlidingWindowLimiter())
 	return localsms.NewService()
 	// 此处可以换成不同的实现
 	//return InitTencentSmsService()
@@ -31,5 +33,5 @@ func InitTencentSmsService() sms.Service {
 		panic(err)
 	}
 
-	return tencent.NewService(c, "123456789", "yumingtao")
+	return tencent.NewService(c, "123456789", "yumingtao", nil)
 }
