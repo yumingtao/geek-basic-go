@@ -6,6 +6,8 @@ import (
 	"geek-basic-go/webook/internal/domain"
 	"geek-basic-go/webook/internal/repository/cache"
 	"geek-basic-go/webook/internal/repository/dao"
+	"log"
+	"time"
 )
 
 var (
@@ -58,12 +60,13 @@ func (repo *CachedUserRepository) toDomain(u dao.User) domain.User {
 		BirthDate:       u.BirthDate,
 		PersonalProfile: u.PersonalProfile,
 		Phone:           u.Phone.String,
+		Ctime:           time.UnixMilli(u.CreatedAt),
 	}
 }
 
 func (repo *CachedUserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
 	du, err := repo.cache.Get(ctx, id)
-	if err != nil {
+	if err == nil {
 		return du, err
 	}
 	u, err := repo.dao.FindById(ctx, id)
@@ -73,8 +76,8 @@ func (repo *CachedUserRepository) FindById(ctx context.Context, id int64) (domai
 	du = repo.toDomain(u)
 	err = repo.cache.Set(ctx, du)
 	if err != nil {
-		// 网络崩了，redis崩了
-		return domain.User{}, err
+		// 网络崩了，redis崩了，忽略调这个错误
+		log.Println(err)
 	}
 	// 可以使用goroutine异步些缓存
 	/*go func() {
@@ -102,7 +105,8 @@ func (repo *CachedUserRepository) FindByIdV1(ctx context.Context, id int64) (dom
 		err = repo.cache.Set(ctx, du)
 		if err != nil {
 			// 网络崩了，redis崩了
-			return domain.User{}, err
+			//return domain.User{}, err, hul掉这个错误
+			log.Println(err)
 		}
 		// 可以使用goroutine异步些缓存
 		/*go func() {

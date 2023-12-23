@@ -45,6 +45,50 @@
 - 使用wire时初始化方法最好返回接口类型，这样wire可以直接使用类型匹配，不然需要使用wire的Bind方法去绑定
 - **但是Go推荐返回具体类型，和wire有冲突**
 
+## Unit Test
+- go test xxx_test.go 测试单一文件
+- go test . 测试当前目录所有
+- go test ./... 当前目录及递归子目录, 常用
+### 测试用例定义
+- 名字：测试场景
+- 预期输入：根据方法参数，接收器设计
+- 预期输出
+- mock: 每一个测试需要使用到的mock
+- 数据准备
+- 数据清理
+
+### 运行测试用例
+- 调用mock或执行before
+- 执行测试方法
+- 比较预期结果
+- 执行after
+
+### 设计测试用例
+- 单元测试：根据代码，最起码做到分支覆盖，覆盖率80%或85%
+- 集成测试：根据业务场景，至少覆盖业务主要正常流程和主要异常流程
+
+### Mock Tools
+#### gomock
+- mockgen: 命令行工具,可以为接口生成mock实现
+  - 安装：go install go.uber.org/mock/mockgen@latest
+  - go install 会安装到GOPATH/bin
+  - 参数：
+    - source: 源文件名
+    - destination: 目标文件名
+    - package: 生成的go文件的package name
+  - 根目录下运行
+    - mockgen -source=./webook/internal/service/user.go -package=svcmocks -destination=./webook/internal/service/mocks/user.mock.go
+- 测试中使用控制mock对象的包
+- [gomock](https://github.com/uber-go/mock)
+
+#### sqlmock
+- [go-sqlmock](https://github.com/DATA-DOG/go-sqlmock)
+- 由于dao依赖的gorm.DB和sql driver(sql.go)使用的是结构体，没有接口，所以不能通过gomock进行mock
+- 基本用法
+  - 用sqlmock创建一个db
+  - 设置模拟调用
+  - 使用db来测试代码：即本代码中让gorm使用这个db，相当于用的mock的数据库驱动
+
 ## Notes
 - 识别业务变化点，超前设计但不超前实现
 - 识别变化点
@@ -60,3 +104,5 @@
 - [gin](https://github.com/gin-gonic/gin)
 - [gorm](https://github.com/go-gorm/gorm)
 - [wire](https://github.com/google/wire)
+- [gomock](https://github.com/uber-go/mock)
+- [go-sqlmock](https://github.com/DATA-DOG/go-sqlmock)

@@ -4,6 +4,7 @@ import (
 	"geek-basic-go/webook/internal/web"
 	"geek-basic-go/webook/internal/web/middlewares/login"
 	"geek-basic-go/webook/pkg/ginx/middleware/ratelimit"
+	"geek-basic-go/webook/pkg/limiter"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -56,7 +57,7 @@ func InitGinMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 		func(ctx *gin.Context) {
 			println("这个另一个middleware")
 		},
-		ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
+		ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 100)).Build(),
 		(&login.JwtMiddlewareBuilder{}).CheckLogin(),
 	}
 }

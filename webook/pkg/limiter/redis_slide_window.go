@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// go:embed slide_window.lua
+//go:embed slide_window.lua
 var luaScript string
 
 type RedisSlidingWindowLimiter struct {

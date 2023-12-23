@@ -145,9 +145,9 @@ func (c *RedisCodeCache) Verify(ctx context.Context, biz, phone, code string) (b
 }
 
 func key(biz, phone string) string {
-	return fmt.Sprintf("phone_code:%s::%s", biz, phone)
+	return fmt.Sprintf("phone_code:%s:%s", biz, phone)
 }
 
 func cntKey(biz, phone string) string {
-	return key(biz, phone) + "::cnt"
+	return key(biz, phone) + ":cnt"
 }
