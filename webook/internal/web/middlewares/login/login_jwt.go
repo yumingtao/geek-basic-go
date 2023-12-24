@@ -19,7 +19,8 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 	gob.Register(time.Now())
 	return func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
-		if path == "/users/login" || path == "/users/login/sms/code" || path == "/users/login/sms" {
+		if path == "/users/login" || path == "/users/login/sms/code" || path == "/users/login/sms" ||
+			path == "/oauth2/wechat/authurl" || path == "/oauth2/wechat/callback" {
 			// 登录不需要校验
 			println("登录不需要校验")
 			return
