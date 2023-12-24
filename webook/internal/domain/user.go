@@ -11,6 +11,8 @@ type User struct {
 	PersonalProfile string
 	Phone           string
 	Ctime           time.Time
+	// 使用组合
+	WechatInfo WechatInfo
 }
 
 // 按照DDD的原则，User password和email的校验应该放在这里
