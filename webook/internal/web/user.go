@@ -8,11 +8,9 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt/v5"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 	"unicode/utf8"
 )
 
@@ -29,6 +27,8 @@ const (
 // 所有和用户相关路由都定义在这个handler上
 // 用定义在UserHandler上的方法来作为路由的处理逻辑
 type UserHandler struct {
+	// 使用组合，JwtHandler
+	JwtHandler
 	emailRexExp     *regexp.Regexp
 	passwordRexExp  *regexp.Regexp
 	birthDateRexExp *regexp.Regexp
@@ -141,26 +141,6 @@ func (h *UserHandler) VerifySmsCode(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "登录成功",
 	})
-}
-
-func (h *UserHandler) setJwtToken(ctx *gin.Context, uid int64) {
-	uc := UserClaims{
-		Uid: uid,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
-		},
-		UserAgent: ctx.GetHeader("User-Agent"),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, uc)
-	signedString, err := token.SignedString(JwtKey)
-	if err != nil {
-		ctx.JSON(http.StatusOK, Result{
-			Code: 5,
-			Msg:  "系统错误",
-		})
-		return
-	}
-	ctx.Header("X-Jwt-Token", signedString)
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -360,12 +340,4 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	default:
 		ctx.String(http.StatusOK, "系统错误！")
 	}
-}
-
-var JwtKey = []byte("99c5468490C311Ee91Bb1A5958B90E3B")
-
-type UserClaims struct {
-	jwt.RegisteredClaims
-	Uid       int64
-	UserAgent string
 }

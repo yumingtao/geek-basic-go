@@ -20,10 +20,33 @@ type UserService interface {
 	Edit(ctx context.Context, u domain.User) (domain.User, error)
 	Profile(ctx context.Context, id int64) (domain.User, error)
 	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
+	FindOrCreatedByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
 }
 
 type UserServiceImpl struct {
 	repo repository.UserRepository
+}
+
+func (scv *UserServiceImpl) FindOrCreatedByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error) {
+	// 认为大部分用户是已存在用户
+	u, err := scv.repo.FindByWechat(ctx, wechatInfo.OpenId)
+	if err != repository.ErrUserNotFound {
+		// err == nil, 找到用户
+		// err != nil, 系统错误
+		return u, err
+	}
+	// 用户没找到，注册用户
+	err = scv.repo.Create(ctx, domain.User{
+		WechatInfo: wechatInfo,
+	})
+	// 有两种可能，1. err是phone唯一索引冲突 2.err是系统错误
+	if err != nil && !errors.Is(err, repository.ErrDuplicateUser) {
+		return domain.User{}, err
+	}
+
+	// err == nil 或 ErrDuplicateUser
+	// 可能存在主从延迟，理论上应该强制查询主库
+	return scv.repo.FindByWechat(ctx, wechatInfo.OpenId)
 }
 
 func NewUserService(repo repository.UserRepository) UserService {

@@ -10,5 +10,9 @@ func InitWechatService() wechat.Service {
 	if !ok {
 		panic("WECHAT_APP_ID environment variable not set")
 	}
-	return wechat.NewService(appId)
+	appSecret, ok := os.LookupEnv("WECHAT_APP_SECRET")
+	if !ok {
+		panic("WECHAT_APP_SECRET environment variable not set")
+	}
+	return wechat.NewService(appId, appSecret)
 }
