@@ -8,6 +8,7 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"log"
 	"net/http"
 	"strconv"
@@ -43,6 +44,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		birthDateRexExp: regexp.MustCompile(birthDateRegexPattern, regexp.None),
 		svc:             svc,
 		codeSvc:         codeSvc,
+		JwtHandler:      newJwtHandler(),
 	}
 }
 
@@ -58,6 +60,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/login", h.LoginWithJwt)
 	ug.GET("/:id", h.Profile)
 	ug.PUT("/:id", h.Edit)
+	ug.PUT("/refresh_token", h.RefreshToken)
 	// 短信验证码相关功能
 	ug.POST("/login/sms/code", h.SendSmsLoginCode)
 	ug.POST("/login/sms", h.VerifySmsCode)
@@ -135,6 +138,11 @@ func (h *UserHandler) VerifySmsCode(ctx *gin.Context) {
 			Code: 5,
 			Msg:  "系统错误",
 		})
+		return
+	}
+	err = h.setRefreshToken(ctx, u.Id)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
 	h.setJwtToken(ctx, u.Id)
@@ -259,6 +267,11 @@ func (h *UserHandler) LoginWithJwt(ctx *gin.Context) {
 			return
 		}
 		ctx.Header("X-Jwt-Token", signedString)*/
+		err := h.setRefreshToken(ctx, u.Id)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
 		h.setJwtToken(ctx, u.Id)
 		ctx.String(http.StatusOK, "恭喜，登录成功")
 	case errors.Is(err, service.ErrInvalidUserOrPassword):
@@ -340,4 +353,25 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	default:
 		ctx.String(http.StatusOK, "系统错误！")
 	}
+}
+
+func (h *UserHandler) RefreshToken(ctx *gin.Context) {
+	// 前端在Authorization中带上refresh token
+	tokenStr := ExtractToken(ctx)
+	var rc RefreshClaims
+	token, err := jwt.ParseWithClaims(tokenStr, &rc, func(token *jwt.Token) (interface{}, error) {
+		return h.refreshKey, nil
+	})
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	if token == nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	h.setJwtToken(ctx, rc.Uid)
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "刷新令牌成功",
+	})
 }

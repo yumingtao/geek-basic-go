@@ -7,7 +7,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -31,23 +30,7 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 			println("注册不需要校验")
 			return
 		}
-		authCode := ctx.GetHeader("Authorization")
-		if authCode == "" {
-			// 没有传token
-			log.Println("没有传token")
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		segs := strings.Split(authCode, " ")
-		if len(segs) != 2 {
-			// 没有按照bearer token格式
-			log.Println("bearer token格式不对")
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		tokenStr := segs[1]
+		tokenStr := web.ExtractToken(ctx)
 		var uc web.UserClaims
 		token, err := jwt.ParseWithClaims(tokenStr, &uc, func(token *jwt.Token) (interface{}, error) {
 			return web.JwtKey, nil
@@ -61,6 +44,7 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 
 		if token == nil || !token.Valid {
 			// token 解析出来，但是非法/已过期
+			// 是否可以在这里触发刷新token - 在这里刷新和自动刷新没有什么区别了
 			log.Println("token过期，请重新登录")
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
@@ -73,7 +57,9 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 			return
 		}
 
-		expireTime := uc.ExpiresAt
+		// 因为使用refresh toke，这个部分不需要了
+		//expireTime := uc.ExpiresAt
+
 		// 如果下边的代码成立，则 !token.Valid肯定是true，所以不用再判断，会被上边的代码拦截住
 		/*if expireTime.Before(time.Now()) {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -81,14 +67,15 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 		}*/
 		// week-03 剩余过期时间小于50s就需要刷新
 		// week-04 压测时，过期时间设置30分钟
-		if expireTime.Sub(time.Now()) < time.Second*50 {
+		// 因为使用refresh toke，这个部分不需要了
+		/*if expireTime.Sub(time.Now()) < time.Second*50 {
 			uc.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 30))
 			tokenStr, err := token.SignedString(web.JwtKey)
 			ctx.Header("X-Jwt-Token", tokenStr)
 			if err != nil {
 				log.Println(err)
 			}
-		}
+		}*/
 		// 登录成功之后，如果在context中设置好，后端不需要再去解析uc了
 		ctx.Set("user", uc)
 	}
