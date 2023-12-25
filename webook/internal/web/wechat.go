@@ -25,6 +25,7 @@ func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService) *OA
 		userSvc:         userSvc,
 		key:             JwtKey,
 		stateCookieName: "jwt-state",
+		JwtHandler:      newJwtHandler(),
 	}
 }
 
@@ -80,6 +81,11 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 			Msg:  "系统错误",
 			Code: 5,
 		})
+		return
+	}
+	err = o.setRefreshToken(ctx, u.Id)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
 	o.setJwtToken(ctx, u.Id)
