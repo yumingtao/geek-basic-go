@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"geek-basic-go/webook/config"
 	"geek-basic-go/webook/internal/repository"
 	"geek-basic-go/webook/internal/repository/cache"
@@ -15,20 +16,71 @@ import (
 	ginredis "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 )
 
 func main() {
+	initViperV1()
 	server := InitWebServer()
 	server.GET("/hello", func(context *gin.Context) {
 		// context核心职责：处理请求，返回响应
 		context.String(http.StatusOK, "Hello, World!")
 	})
 	err := server.Run(":8080")
+	if err != nil {
+		return
+	}
+}
+
+func initViper() {
+	viper.SetConfigName("dev")
+	viper.SetConfigType("yaml")
+	//当前工作目录的config子目录
+	viper.AddConfigPath("config")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+	log.Println(viper.Get("test.key"))
+}
+
+func initViperV1() {
+	// 读取命令行配置的方式 go run . --config=config/dev.yaml
+	cFile := pflag.String("config", "config/dev.yaml", "配置文件路径")
+	pflag.Parse()
+	viper.SetConfigFile(*cFile)
+
+	// 设置默认值
+	//viper.Set("db.dsn", "localhost:3306")
+	// viper.SetConfigType("yaml")
+	//viper.SetConfigFile("config/dev.yaml")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+	log.Println(viper.Get("test.key"))
+}
+
+func initViperV2() {
+	cfg := `
+test:
+  key: value1
+
+redis:
+  addr: "localhost:6379"
+
+db:
+  dsn: "root:root@tcp(127.0.0.1:13306)/webook?charset=utf8mb4&parseTime=True&loc=Local"
+`
+	viper.SetConfigType("yaml")
+	err := viper.ReadConfig(bytes.NewReader([]byte(cfg)))
 	if err != nil {
 		return
 	}
