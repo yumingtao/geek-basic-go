@@ -62,7 +62,7 @@ func initUserHdl(db *gorm.DB, redisClient redis.Cmdable, codeSvc service.CodeSer
 	us := service.NewUserService(ur)
 
 	//hdl := &user.UserHandler{}
-	hdl := web.NewUserHandler(us, codeSvc)
+	hdl := web.NewUserHandler(us, codeSvc, nil)
 	// 分散注册
 	// 优点：比较有条理 缺点：找路由的时候不好找
 	hdl.RegisterRoutes(server)

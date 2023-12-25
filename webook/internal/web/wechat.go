@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"geek-basic-go/webook/internal/service"
 	"geek-basic-go/webook/internal/service/oauth2/wechat"
+	ijwt "geek-basic-go/webook/internal/web/jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	uuid "github.com/lithammer/shortuuid/v4"
@@ -14,18 +15,18 @@ type OAuth2WechatHandler struct {
 	// 组合JwtHandler
 	svc     wechat.Service
 	userSvc service.UserService
-	JwtHandler
+	ijwt.Handler
 	key             []byte
 	stateCookieName string
 }
 
-func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService) *OAuth2WechatHandler {
+func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService, hdl ijwt.Handler) *OAuth2WechatHandler {
 	return &OAuth2WechatHandler{
 		svc:             svc,
 		userSvc:         userSvc,
-		key:             JwtKey,
+		key:             ijwt.UcJwtKey,
 		stateCookieName: "jwt-state",
-		JwtHandler:      newJwtHandler(),
+		Handler:         hdl,
 	}
 }
 
@@ -64,7 +65,7 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 		})
 		return
 	}
-	// 校验或不校验都可以，如果值是空，后边调用微信接口会返回error
+	// 校验或不校验都可以，如果是空值，后边调用微信接口会返回error
 	code := ctx.Query("code")
 	wechatInfo, err := o.svc.VerifyCode(ctx, code)
 	if err != nil {
@@ -83,12 +84,11 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 		})
 		return
 	}
-	err = o.setRefreshToken(ctx, u.Id)
+	err = o.SetLoginToken(ctx, u.Id)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
-	o.setJwtToken(ctx, u.Id)
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "OK",
 	})
@@ -126,7 +126,7 @@ func (o *OAuth2WechatHandler) setStateCookie(ctx *gin.Context, state string) err
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	tokenString, err := token.SignedString(o.key)
-	//tokenString, err := token.SignedString(JwtKey)
+	//tokenString, err := token.SignedString(UcJwtKey)
 	if err != nil {
 		return err
 	}

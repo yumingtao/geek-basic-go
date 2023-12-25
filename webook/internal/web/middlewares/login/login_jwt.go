@@ -2,7 +2,7 @@ package login
 
 import (
 	"encoding/gob"
-	"geek-basic-go/webook/internal/web"
+	ijwt "geek-basic-go/webook/internal/web/jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"log"
@@ -11,6 +11,13 @@ import (
 )
 
 type JwtMiddlewareBuilder struct {
+	ijwt.Handler
+}
+
+func NewJwtMiddlewareBuilder(hdl ijwt.Handler) *JwtMiddlewareBuilder {
+	return &JwtMiddlewareBuilder{
+		Handler: hdl,
+	}
 }
 
 func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
@@ -30,10 +37,10 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 			println("注册不需要校验")
 			return
 		}
-		tokenStr := web.ExtractToken(ctx)
-		var uc web.UserClaims
+		tokenStr := m.ExtractToken(ctx)
+		var uc ijwt.UserClaims
 		token, err := jwt.ParseWithClaims(tokenStr, &uc, func(token *jwt.Token) (interface{}, error) {
-			return web.JwtKey, nil
+			return ijwt.UcJwtKey, nil
 		})
 		if err != nil {
 			// token不对
@@ -70,13 +77,30 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 		// 因为使用refresh toke，这个部分不需要了
 		/*if expireTime.Sub(time.Now()) < time.Second*50 {
 			uc.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute * 30))
-			tokenStr, err := token.SignedString(web.JwtKey)
+			tokenStr, err := token.SignedString(web.UcJwtKey)
 			ctx.Header("X-Jwt-Token", tokenStr)
 			if err != nil {
 				log.Println(err)
 			}
 		}*/
 		// 登录成功之后，如果在context中设置好，后端不需要再去解析uc了
+
+		// 这里查看下redis，用户是否登出
+		err = m.CheckSession(ctx, uc.Ssid)
+		if err != nil {
+			// 用户已登出或者redis有问题
+			log.Println("用户已登出")
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// 比较温和的做法，兼容redis异常，如果redis有问题，result会是默认的0值，这样允许用户登录继续使用系统
+		/*if result > 0 {
+			// 用户已登出
+			log.Println("用户已登出")
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}*/
 		ctx.Set("user", uc)
 	}
 }
