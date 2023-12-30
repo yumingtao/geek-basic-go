@@ -11,6 +11,7 @@ import (
 	"geek-basic-go/webook/internal/service/sms/localsms"
 	"geek-basic-go/webook/internal/web"
 	"geek-basic-go/webook/internal/web/middlewares/login"
+	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	ginredis "github.com/gin-contrib/sessions/redis"
@@ -18,6 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
@@ -27,7 +29,8 @@ import (
 )
 
 func main() {
-	initViperV1()
+	initViperRemote()
+	//initViperWatch()
 	server := InitWebServer()
 	server.GET("/hello", func(context *gin.Context) {
 		// context核心职责：处理请求，返回响应
@@ -84,6 +87,52 @@ db:
 	if err != nil {
 		return
 	}
+}
+
+func initViperRemote() {
+	err := viper.AddRemoteProvider("etcd3", "http://127.0.0.1:12379", "/webook")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetConfigType("yaml")
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		log.Println("远程配置中心发生变更")
+	})
+	err = viper.ReadRemoteConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	// 这段代码如果放到err = viper.ReadRemoteConfig()之前，去掉time.sleep，会有并发安全问题
+	// 监听远程配置中心事件，推荐使用etcd原始api
+	go func() {
+		for {
+			err = viper.WatchRemoteConfig()
+			if err != nil {
+				panic(err)
+			}
+			log.Println("watch:", viper.Get("test.key"))
+			time.Sleep(time.Second * 3)
+		}
+	}()
+}
+
+func initViperWatch() {
+	cfile := pflag.String("config", "config/config.yaml", "配置文件路径")
+	// 这一步之后cfile中才有值
+	pflag.Parse()
+	viper.SetConfigType("yaml")
+	viper.SetConfigFile(*cfile)
+	viper.WatchConfig()
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		log.Println(viper.Get("test.key"))
+	})
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+	val := viper.Get("test.key")
+	log.Println(val)
 }
 
 // =========使用wire重构完代码之后，以下代码都用不上了===================
