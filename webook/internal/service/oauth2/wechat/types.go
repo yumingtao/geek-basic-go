@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"geek-basic-go/webook/internal/domain"
+	"geek-basic-go/webook/pkg/logger"
 	"net/http"
 	"net/url"
 )
@@ -25,6 +26,7 @@ type WechatService struct {
 	appId     string
 	appSecret string
 	client    *http.Client
+	l         logger.LoggerV1
 }
 
 func (w *WechatService) VerifyCode(ctx context.Context, code string) (domain.WechatInfo, error) {
@@ -52,11 +54,12 @@ func (w *WechatService) VerifyCode(ctx context.Context, code string) (domain.Wec
 	}, nil
 }
 
-func NewService(appId string, appSecret string) Service {
+func NewService(appId string, appSecret string, l logger.LoggerV1) Service {
 	return &WechatService{
 		appId:     appId,
 		appSecret: appSecret,
 		client:    http.DefaultClient,
+		l:         l,
 	}
 }
 
