@@ -1,11 +1,14 @@
 package ioc
 
 import (
+	"context"
 	"geek-basic-go/webook/internal/web"
 	ijwt "geek-basic-go/webook/internal/web/jwt"
+	"geek-basic-go/webook/internal/web/middlewares/log"
 	"geek-basic-go/webook/internal/web/middlewares/login"
 	"geek-basic-go/webook/pkg/ginx/middleware/ratelimit"
 	"geek-basic-go/webook/pkg/limiter"
+	"geek-basic-go/webook/pkg/logger"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -35,7 +38,7 @@ func InitWebServerV1(mdls []gin.HandlerFunc, hdls []web.Handler) *gin.Engine {
 // InitGinMiddlewares
 // 这一部分需要手动添加进来，go和wire目前不能自动发现gin.HandlerFunc实例后自动组装进来
 // wire是通过抽象语法树来发现依赖，并注入的
-func InitGinMiddlewares(redisClient redis.Cmdable, hdl ijwt.Handler) []gin.HandlerFunc {
+func InitGinMiddlewares(redisClient redis.Cmdable, hdl ijwt.Handler, l logger.LoggerV1) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		cors.New(cors.Config{
 			//AllowAllOrigins: true,
@@ -60,6 +63,12 @@ func InitGinMiddlewares(redisClient redis.Cmdable, hdl ijwt.Handler) []gin.Handl
 			println("这个另一个middleware")
 		},
 		ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 100)).Build(),
+		log.NewLogMiddlewareBuilder(func(ctx context.Context, al log.AccessLog) {
+			l.Debug("", logger.Field{
+				Key: "req",
+				Val: al,
+			})
+		}).AllowReqBody().AllowRespBody().Build(),
 		login.NewJwtMiddlewareBuilder(hdl).CheckLogin(),
 	}
 }
