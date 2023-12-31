@@ -10,6 +10,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"strconv"
@@ -97,6 +98,7 @@ func (h *UserHandler) SendSmsLoginCode(ctx *gin.Context) {
 			Msg:  "短信发送太频繁，请稍后再试",
 		})
 		// 埋点日志
+		zap.L().Warn("频繁发送验证码")
 	default:
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -123,8 +125,8 @@ func (h *UserHandler) VerifySmsCode(ctx *gin.Context) {
 			Code: 5,
 			Msg:  "系统错误",
 		})
+		zap.L().Error("手机验证码验证失败:", zap.String("phone", req.Phone), zap.Error(err))
 		return
-		// 补充日志
 	}
 	if !ok {
 		ctx.JSON(http.StatusOK, Result{

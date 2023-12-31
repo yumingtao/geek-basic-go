@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
+	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
@@ -29,8 +30,10 @@ import (
 )
 
 func main() {
-	initViperRemote()
+	initViperV1()
+	//initViperRemote()
 	//initViperWatch()
+	initLogger()
 	server := InitWebServer()
 	server.GET("/hello", func(context *gin.Context) {
 		// context核心职责：处理请求，返回响应
@@ -40,6 +43,14 @@ func main() {
 	if err != nil {
 		return
 	}
+}
+
+func initLogger() {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	zap.ReplaceGlobals(logger)
 }
 
 func initViper() {
