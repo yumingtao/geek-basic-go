@@ -13,25 +13,25 @@
 
 ## Send SMS Code
 ### Postman
-![img.png](postman-shots/week-04/send_sms_code_postman.png)
+![img.png](../postman-shots/week-04/send_sms_code_postman.png)
 ### Terminal
-![img.png](postman-shots/week-04/send_sms_code_terminal.png)
+![img.png](../postman-shots/week-04/send_sms_code_terminal.png)
 
 ## Verify SMS Code Succeed - Has not Verified
 ### Postman
-![img_2.png](postman-shots/week-04/verify_sms_code_postman.png)
+![img_2.png](../postman-shots/week-04/verify_sms_code_postman.png)
 ## GoLand
-![img_1.png](postman-shots/week-04/verify_sms_code_goland.png)
+![img_1.png](../postman-shots/week-04/verify_sms_code_goland.png)
 
 ## Verify SMS Code Failed - Incorrect Code
 ### Postman
-![img_1.png](postman-shots/week-04/verify_sms_code_incorrect_code_postman.png)
+![img_1.png](../postman-shots/week-04/verify_sms_code_incorrect_code_postman.png)
 ### GoLand
-![img.png](postman-shots/week-04/verify_sms_code_incorrect_code_goland.png)
+![img.png](../postman-shots/week-04/verify_sms_code_incorrect_code_goland.png)
 
 ## Verify SMS Code Failed - Has Verified
 ### Postman
-![img_1.png](postman-shots/week-04/verify_sms_code_verified_postman.png)
+![img_1.png](../postman-shots/week-04/verify_sms_code_verified_postman.png)
 
 ### GoLand
-![img.png](postman-shots/week-04/verify_sms_code_verified_goland.png)
+![img.png](../postman-shots/week-04/verify_sms_code_verified_goland.png)
