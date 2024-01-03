@@ -19,3 +19,7 @@ func InitLogger() logger.LoggerV1 {
 	}
 	return logger.NewZapLogger(l)
 }
+
+/*func InitErrLogger(l logger.LoggerV1) logger.ErrLogger {
+	return logger.NewErrLogger(l)
+}*/

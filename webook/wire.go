@@ -10,6 +10,7 @@ import (
 	"geek-basic-go/webook/internal/web"
 	ijwt "geek-basic-go/webook/internal/web/jwt"
 	"geek-basic-go/webook/ioc"
+	"geek-basic-go/webook/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
@@ -17,7 +18,7 @@ import (
 func InitWebServer() *gin.Engine {
 	wire.Build(
 		// 第三方依赖
-		ioc.InitDB, ioc.InitRedis, ioc.InitLogger,
+		ioc.InitDB, ioc.InitRedis, ioc.InitLogger, logger.NewErrLogger,
 		// Dao
 		dao.NewUserDao,
 		// Cache

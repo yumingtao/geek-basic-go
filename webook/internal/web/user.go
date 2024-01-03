@@ -6,6 +6,7 @@ import (
 	"geek-basic-go/webook/internal/domain"
 	"geek-basic-go/webook/internal/service"
 	ijwt "geek-basic-go/webook/internal/web/jwt"
+	"geek-basic-go/webook/pkg/logger"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -37,9 +38,10 @@ type UserHandler struct {
 	birthDateRexExp *regexp.Regexp
 	svc             service.UserService
 	codeSvc         service.CodeService
+	errLogger       logger.ErrLogger
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService, hdl ijwt.Handler) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, hdl ijwt.Handler, l logger.ErrLogger) *UserHandler {
 	return &UserHandler{
 		emailRexExp:     regexp.MustCompile(emailRegexPattern, regexp.None),
 		passwordRexExp:  regexp.MustCompile(passwordRegexPattern, regexp.None),
@@ -47,6 +49,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService, hdl ij
 		svc:             svc,
 		codeSvc:         codeSvc,
 		Handler:         hdl,
+		errLogger:       l,
 	}
 }
 
@@ -125,6 +128,7 @@ func (h *UserHandler) VerifySmsCode(ctx *gin.Context) {
 			Code: 5,
 			Msg:  "系统错误",
 		})
+		h.errLogger.HandleError(err, "手机验证码验证失败")
 		zap.L().Error("手机验证码验证失败:", zap.String("phone", req.Phone), zap.Error(err))
 		return
 	}
@@ -142,11 +146,16 @@ func (h *UserHandler) VerifySmsCode(ctx *gin.Context) {
 			Code: 5,
 			Msg:  "系统错误",
 		})
+		h.errLogger.HandleError(err, "系统错误")
 		return
 	}
 	err = h.SetLoginToken(ctx, u.Id)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		h.errLogger.HandleError(err, "系统错误", logger.Field{
+			Key: "origErr",
+			Val: err,
+		})
 		return
 	}
 	ctx.JSON(http.StatusOK, Result{
@@ -174,6 +183,7 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	isEmail, err := h.emailRexExp.MatchString(req.Email)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		h.errLogger.HandleError(err, "系统错误")
 		return
 	}
 	if !isEmail {
@@ -188,6 +198,7 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	isPassword, err := h.passwordRexExp.MatchString(req.Password)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		h.errLogger.HandleError(err, "系统错误")
 		return
 	}
 	if !isPassword {
@@ -244,6 +255,7 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		err := sess.Save()
 		if err != nil {
 			ctx.String(http.StatusOK, "系统错误！")
+			h.errLogger.HandleError(err, "系统错误")
 			return
 		}
 		ctx.String(http.StatusOK, "恭喜，登录成功")
@@ -255,12 +267,14 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 }
 
 func (h *UserHandler) LoginWithJwt(ctx *gin.Context) {
+
 	type LoginReq struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 	var req LoginReq
 	if err := ctx.Bind(&req); err != nil {
+		h.errLogger.HandleError(err, "系统错误")
 		return
 	}
 	u, err := h.svc.Login(ctx, req.Email, req.Password)
@@ -285,10 +299,12 @@ func (h *UserHandler) LoginWithJwt(ctx *gin.Context) {
 		err := h.SetLoginToken(ctx, u.Id)
 		if err != nil {
 			ctx.String(http.StatusOK, "系统错误")
+			h.errLogger.HandleError(err, "系统错误")
 			return
 		}
 		ctx.String(http.StatusOK, "恭喜，登录成功")
 	case errors.Is(err, service.ErrInvalidUserOrPassword):
+		h.errLogger.HandleError(err, "系统错误")
 		ctx.String(http.StatusOK, "登录失败："+err.Error())
 	default:
 		ctx.String(http.StatusOK, "系统错误！")
@@ -301,6 +317,7 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 	id, err := strconv.ParseInt(paramId, 10, 64)
 	if err != nil {
 		ctx.String(http.StatusOK, "不是有效的用户id")
+		h.errLogger.HandleError(err, "不是有效的用户id")
 		return
 	}
 	u, err := h.svc.Profile(ctx, id)
@@ -333,6 +350,7 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	isBirthDate, err := h.birthDateRexExp.MatchString(req.BirthDate)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		h.errLogger.HandleError(err, "系统错误")
 		return
 	}
 	if !isBirthDate {
@@ -344,6 +362,7 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 	id, err := strconv.ParseInt(paramId, 10, 64)
 	if err != nil {
 		ctx.String(http.StatusOK, "不是有效的用户id")
+		h.errLogger.HandleError(err, "不是有效的用户id")
 		return
 	}
 	u, err := h.svc.Edit(ctx, domain.User{
@@ -388,12 +407,14 @@ func (h *UserHandler) RefreshToken(ctx *gin.Context) {
 	if err != nil {
 		// 用户已登出或者redis有问题
 		log.Println("用户已登出")
+		h.errLogger.HandleError(err, "用户已登出")
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
 	err = h.SetJwtToken(ctx, rc.Uid, rc.Ssid)
 	if err != nil {
+		h.errLogger.HandleError(err, "设置Jwt token报错")
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
@@ -409,6 +430,7 @@ func (h *UserHandler) LogoutWithJwt(ctx *gin.Context) {
 			Msg:  "系统错误",
 			Code: 5,
 		})
+		h.errLogger.HandleError(err, "系统错误")
 		return
 	}
 	ctx.JSON(http.StatusOK, Result{
