@@ -12,16 +12,20 @@ import (
 	"geek-basic-go/webook/internal/repository/dao"
 	"geek-basic-go/webook/internal/service"
 	"geek-basic-go/webook/internal/web"
+	"geek-basic-go/webook/internal/web/jwt"
 	"geek-basic-go/webook/ioc"
 	"github.com/gin-gonic/gin"
+	"github.com/google/wire"
 )
 
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {
 	cmdable := InitRedis()
-	v := ioc.InitGinMiddlewares(cmdable)
-	db := ioc.InitDB()
+	handler := jwt.NewRedisJwtHandler(cmdable)
+	loggerV1 := InitLogger()
+	v := ioc.InitGinMiddlewares(cmdable, handler, loggerV1)
+	db := InitDB()
 	userDao := dao.NewUserDao(db)
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewCachedUserRepository(userDao, userCache)
@@ -30,7 +34,27 @@ func InitWebServer() *gin.Engine {
 	codeRepository := repository.NewCachedCodeRepository(codeCache)
 	smsService := ioc.InitSmsService()
 	codeService := service.NewCodeService(codeRepository, smsService)
-	userHandler := web.NewUserHandler(userService, codeService)
-	engine := ioc.InitWebServer(v, userHandler)
+	userHandler := web.NewUserHandler(userService, codeService, handler)
+	wechatService := InitWechatService(loggerV1)
+	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
+	articleDao := dao.NewArticleDao(db)
+	articleRepository := repository.NewArticleRepository(articleDao)
+	articleService := service.NewArticleService(articleRepository)
+	articleHandler := web.NewArticleHandler(articleService, loggerV1)
+	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
 	return engine
 }
+
+func InitArticleHandler() *web.ArticleHandler {
+	db := InitDB()
+	articleDao := dao.NewArticleDao(db)
+	articleRepository := repository.NewArticleRepository(articleDao)
+	articleService := service.NewArticleService(articleRepository)
+	loggerV1 := InitLogger()
+	articleHandler := web.NewArticleHandler(articleService, loggerV1)
+	return articleHandler
+}
+
+// wire.go:
+
+var thirdPartySet = wire.NewSet(InitDB, InitRedis, InitLogger)
