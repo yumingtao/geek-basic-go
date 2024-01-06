@@ -22,8 +22,9 @@ func NewArticleHandler(svc service.ArticleService, l logger.LoggerV1) *ArticleHa
 }
 
 func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
-	g := server.Group("/article")
+	g := server.Group("/articles")
 	g.POST("/edit", h.Edit)
+	g.POST("/publish", h.Publish)
 }
 
 // Edit 返回article id
@@ -50,9 +51,44 @@ func (h *ArticleHandler) Edit(ctx *gin.Context) {
 	})
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
-			Msg: "系统错误",
+			Code: 5,
+			Msg:  "系统错误",
 		})
 		h.l.Error("保存文章失败", logger.Int64("uid", uc.Uid), logger.Error(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Data: id,
+	})
+}
+
+func (h *ArticleHandler) Publish(ctx *gin.Context) {
+	type Req struct {
+		Id      int64  `json:"id"`
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	}
+
+	var req Req
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	uc := ctx.MustGet("user").(jwt.UserClaims)
+	id, err := h.svc.Publish(ctx, domain.Article{
+		Id:      req.Id,
+		Title:   req.Title,
+		Content: req.Content,
+		Author: domain.Author{
+			Id: uc.Uid,
+		},
+	})
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		h.l.Error("发表文章失败", logger.Int64("uid", uc.Uid), logger.Error(err))
 		return
 	}
 	ctx.JSON(http.StatusOK, Result{

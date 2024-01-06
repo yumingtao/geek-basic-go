@@ -167,7 +167,7 @@ func (s *ArticleHandlerSuite) TestEdit() {
 			reqBody, err := json.Marshal(tc.art)
 			assert.NoError(t, err)
 			// 准备请求
-			req, err := http.NewRequest(http.MethodPost, "/article/edit", bytes.NewReader(reqBody))
+			req, err := http.NewRequest(http.MethodPost, "/articles/edit", bytes.NewReader(reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			assert.NoError(t, err)
 			// 准备记录响应
