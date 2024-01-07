@@ -6,6 +6,8 @@ mock:
 	@mockgen -source=./webook/internal/service/sms/types.go -package=smsmocks -destination=./webook/internal/service/sms/mocks/sms.mock.go
 	@mockgen -source=./webook/internal/repository/user.go -package=repomocks -destination=./webook/internal/repository/mocks/user.mock.go
 	@mockgen -source=./webook/internal/repository/article.go -package=repomocks -destination=./webook/internal/repository/mocks/article.mock.go
+	@mockgen -source=./webook/internal/repository/article_author.go -package=repomocks -destination=./webook/internal/repository/mocks/article_author.mock.go
+	@mockgen -source=./webook/internal/repository/article_reader.go -package=repomocks -destination=./webook/internal/repository/mocks/article_reader.mock.go
 	@mockgen -source=./webook/internal/repository/code.go -package=repomocks -destination=./webook/internal/repository/mocks/code.mock.go
 	@mockgen -source=./webook/internal/repository/dao/user.go -package=daomocks -destination=./webook/internal/repository/dao/mocks/user.mock.go
 	@mockgen -source=./webook/internal/repository/dao/article.go -package=daomocks -destination=./webook/internal/repository/dao/mocks/article.mock.go
