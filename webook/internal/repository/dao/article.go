@@ -57,3 +57,11 @@ type Article struct {
 	Ctime    int64
 	Utime    int64
 }
+
+// PublishedArticle 衍生类型
+type PublishedArticle Article
+
+// PublishedArticleV1 使用组合的方式
+type PublishedArticleV1 struct {
+	Article
+}
