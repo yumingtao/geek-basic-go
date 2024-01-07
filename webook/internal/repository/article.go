@@ -38,7 +38,7 @@ func NewArticleRepositoryV1(
 }
 
 func (c *CachedArticleRepository) Sync(ctx context.Context, art domain.Article) (int64, error) {
-	panic("Implement")
+	return c.dao.Sync(ctx, c.toEntity(art))
 }
 
 func (c *CachedArticleRepository) SyncV2(ctx context.Context, art domain.Article) (int64, error) {

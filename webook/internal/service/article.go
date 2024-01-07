@@ -38,8 +38,11 @@ func NewArticleService(repo repository.ArticleRepository) ArticleService {
 }
 
 func (a *ArticleServiceImpl) Publish(ctx context.Context, art domain.Article) (int64, error) {
-	a.repo.SyncV1(ctx, art)
-	panic("Implement me")
+	id, err := a.repo.Sync(ctx, art)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func (a *ArticleServiceImpl) PublishV1(ctx context.Context, art domain.Article) (int64, error) {
