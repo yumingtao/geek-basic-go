@@ -194,7 +194,7 @@ func TestUserHandler_SignUp(t *testing.T) {
 			// mock UserService 和 CodService
 			userSvc, codeSvc := tc.mock(ctrl)
 			// 创建UserHandler
-			hdl := NewUserHandler(userSvc, codeSvc)
+			hdl := NewUserHandler(userSvc, codeSvc, nil)
 			// 注册路由
 			server := gin.Default()
 			hdl.RegisterRoutes(server)
@@ -236,7 +236,7 @@ func TestUserEmailPattern(t *testing.T) {
 			match: true,
 		},
 	}
-	h := NewUserHandler(nil, nil)
+	h := NewUserHandler(nil, nil, nil)
 	// 执行测试用例
 	for _, tc := range testCase {
 		t.Run(tc.name, func(t *testing.T) {
