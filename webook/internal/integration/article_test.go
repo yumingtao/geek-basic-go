@@ -62,10 +62,15 @@ func (s *ArticleHandlerSuite) TestEdit() {
 				assert.NoError(t, err)
 				assert.True(t, art.Ctime > 0)
 				assert.True(t, art.Utime > 0)
-				assert.True(t, art.Id > 0)
-				assert.Equal(t, "我的标题", art.Title)
-				assert.Equal(t, "我的内容", art.Content)
-				assert.Equal(t, int64(123), art.AuthorId)
+				art.Utime = 0
+				art.Ctime = 0
+				assert.Equal(t, dao.Article{
+					Id:       1,
+					Title:    "我的标题",
+					Content:  "我的内容",
+					AuthorId: 123,
+					Status:   1,
+				}, art)
 			},
 			art: Article{
 				Title:   "我的标题",
@@ -84,9 +89,10 @@ func (s *ArticleHandlerSuite) TestEdit() {
 					Title:    "我的标题",
 					Content:  "我的内容",
 					AuthorId: 123,
-					Status:   1,
-					Utime:    456,
-					Ctime:    789,
+					// 已经发表的帖子
+					Status: 2,
+					Utime:  456,
+					Ctime:  789,
 				}).Error
 				assert.NoError(t, err)
 			},
@@ -102,8 +108,9 @@ func (s *ArticleHandlerSuite) TestEdit() {
 					Title:    "我的标题",
 					Content:  "我的内容",
 					AuthorId: 123,
-					Status:   1,
-					Ctime:    789,
+					// 修改之后是未发表状态
+					Status: 1,
+					Ctime:  789,
 				}, art)
 			},
 			art: Article{
@@ -152,7 +159,8 @@ func (s *ArticleHandlerSuite) TestEdit() {
 			},
 			wantedCode: http.StatusOK,
 			wantedRes: Result[int64]{
-				Msg: "系统错误",
+				Code: 5,
+				Msg:  "系统错误",
 			},
 		},
 	}

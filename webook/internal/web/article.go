@@ -25,6 +25,7 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g := server.Group("/articles")
 	g.POST("/edit", h.Edit)
 	g.POST("/publish", h.Publish)
+	g.POST("/withdraw", h.Withdraw)
 }
 
 // Edit 返回article id
@@ -93,5 +94,33 @@ func (h *ArticleHandler) Publish(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, Result{
 		Data: id,
+	})
+}
+
+func (h *ArticleHandler) Withdraw(ctx *gin.Context) {
+	type Req struct {
+		Id int64 `json:"id"`
+	}
+	var req Req
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	uc := ctx.MustGet("user").(jwt.UserClaims)
+	err := h.svc.Withdraw(ctx, uc.Uid, req.Id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		h.l.Error("撤回文章失败",
+			logger.Int64("uid", uc.Uid),
+			logger.Int64("aid", req.Id),
+			logger.Error(err),
+		)
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Data: req.Id,
 	})
 }

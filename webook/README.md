@@ -95,6 +95,11 @@
   - 任何第三方工具，都存在替换可能
   - 业务流程中不太合理的地方
   - 核心逻辑一定要面向接口编程
+## 对于BSON的理解
+- E: 一个普通的价值对结构体，value可以是其它三个
+- D: E的切片
+- M: 一个map，key是string，value可以是任意值
+- A: 切片，元素可以是其它三个
 
 ## References
 - [kratos](https://go-kratos.dev/en/docs)

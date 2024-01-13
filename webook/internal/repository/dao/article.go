@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"errors"
+	"geek-basic-go/webook/internal/domain"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"
@@ -12,10 +13,37 @@ type ArticleDao interface {
 	Insert(ctx context.Context, art Article) (int64, error)
 	UpdateById(ctx context.Context, art Article) error
 	Sync(ctx context.Context, art Article) (int64, error)
+	SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error
 }
 
 type ArticleGormDao struct {
 	db *gorm.DB
+}
+
+func (a *ArticleGormDao) SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error {
+	now := time.Now().UnixMilli()
+	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&Article{}).
+			Where("id=? and author_id=?", id, uid).
+			Updates(map[string]any{
+				"utime":  now,
+				"status": status,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return errors.New("更新失败，ID不对或作者不对")
+		}
+
+		return tx.Model(&PublishedArticle{}).
+			Where("id=?", id).
+			Updates(map[string]any{
+				"utime":  now,
+				"status": status,
+			}).Error
+	})
+	return err
 }
 
 func (a *ArticleGormDao) Sync(ctx context.Context, art Article) (int64, error) {
@@ -90,6 +118,7 @@ func (a *ArticleGormDao) SyncV1(ctx context.Context, art Article) (int64, error)
 		DoUpdates: clause.Assignments(map[string]interface{}{
 			"title":   pubArt.Title,
 			"content": pubArt.Content,
+			"status":  pubArt.Status,
 			"utime":   now,
 		}),
 	}).Create(&pubArt).Error
@@ -121,6 +150,7 @@ func (a *ArticleGormDao) UpdateById(ctx context.Context, art Article) error {
 		Updates(map[string]any{
 			"title":   art.Title,
 			"content": art.Content,
+			"status":  art.Status,
 			"utime":   now,
 		})
 	if res.Error != nil {
@@ -137,7 +167,7 @@ type Article struct {
 	Title    string `gorm:"type=varchar(4096)"`
 	Content  string `gorm:type=BLOB`
 	AuthorId int64  `gorm:"index"`
-	Status   int64
+	Status   uint8
 	Ctime    int64
 	Utime    int64
 }
