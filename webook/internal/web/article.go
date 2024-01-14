@@ -5,8 +5,10 @@ import (
 	"geek-basic-go/webook/internal/service"
 	"geek-basic-go/webook/internal/web/jwt"
 	"geek-basic-go/webook/pkg/logger"
+	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 type ArticleHandler struct {
@@ -26,6 +28,11 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g.POST("/edit", h.Edit)
 	g.POST("/publish", h.Publish)
 	g.POST("/withdraw", h.Withdraw)
+
+	// 创作者接口
+	// List接口，一般是GET的，形如list?offset=?&limit=?, 这里定义成post，然后通过body接收参数
+	g.POST("/list", h.List)
+	g.GET("/detail/:id", h.Detail)
 }
 
 // Edit 返回article id
@@ -123,4 +130,48 @@ func (h *ArticleHandler) Withdraw(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Result{
 		Data: req.Id,
 	})
+}
+
+func (h *ArticleHandler) List(ctx *gin.Context) {
+	var page Page
+	if err := ctx.Bind(&page); err != nil {
+		return
+	}
+	uc := ctx.MustGet("user").(jwt.UserClaims)
+	arts, err := h.svc.GetByAuthor(ctx, uc.Uid, page.Offset, page.Limit)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		h.l.Error("查找文章列表失败",
+			logger.Error(err),
+			logger.Int("offset", page.Offset),
+			logger.Int("limit", page.Limit),
+			logger.Int64("uid", uc.Uid))
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Data: slice.Map[domain.Article, ArticleVo](arts, func(idx int, src domain.Article) ArticleVo {
+			return toVo(src)
+		}),
+	})
+}
+
+func toVo(art domain.Article) ArticleVo {
+	return ArticleVo{
+		Id:       art.Id,
+		Title:    art.Title,
+		Abstract: art.Abstract(),
+		//Content:    art.Content,
+		AuthorId:   art.Author.Id,
+		AuthorName: art.Author.Name,
+		Status:     art.Status.ToUint8(),
+		Ctime:      art.Ctime.Format(time.DateTime),
+		Utime:      art.Utime.Format(time.DateTime),
+	}
+}
+
+func (h *ArticleHandler) Detail(ctx *gin.Context) {
+
 }
