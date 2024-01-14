@@ -8,6 +8,7 @@ import (
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -173,5 +174,52 @@ func toVo(art domain.Article) ArticleVo {
 }
 
 func (h *ArticleHandler) Detail(ctx *gin.Context) {
-
+	idstr := ctx.Param("id")
+	id, err := strconv.ParseInt(idstr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "id参数错误",
+		})
+		h.l.Warn("查找文章失败, id格式不对",
+			logger.Error(err),
+			logger.String("id", idstr))
+		return
+	}
+	art, err := h.svc.GetById(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		h.l.Error("查找文章失败",
+			logger.Error(err),
+			logger.Int64("id", id))
+		return
+	}
+	uc := ctx.MustGet("user").(jwt.UserClaims)
+	if art.Author.Id != uc.Uid {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		h.l.Error("非法查询文章",
+			logger.Error(err),
+			logger.Int64("id", id),
+			logger.Int64("uid", uc.Uid))
+		return
+	}
+	artVo := ArticleVo{
+		Id:    art.Id,
+		Title: art.Title,
+		//Abstract: art.Abstract(),
+		Content:  art.Content,
+		AuthorId: art.Author.Id,
+		Status:   art.Status.ToUint8(),
+		Ctime:    art.Ctime.Format(time.DateTime),
+		Utime:    art.Utime.Format(time.DateTime),
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Data: artVo,
+	})
 }

@@ -16,6 +16,7 @@ type ArticleRepository interface {
 	Sync(ctx context.Context, art domain.Article) (int64, error)
 	SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
+	GetById(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type CachedArticleRepository struct {
@@ -24,6 +25,24 @@ type CachedArticleRepository struct {
 	readerDao dao.ArticleReaderDao
 	authorDao dao.ArticleAuthorDao
 	db        *gorm.DB
+}
+
+func (c *CachedArticleRepository) GetById(ctx context.Context, id int64) (domain.Article, error) {
+	res, err := c.cache.Get(ctx, id)
+	if err == nil {
+		return res, nil
+	}
+	art, err := c.dao.GetById(ctx, id)
+	if err != nil {
+		return domain.Article{}, err
+	}
+	go func() {
+		err := c.cache.Set(ctx, art)
+		if err != nil {
+			// 记录日志
+		}
+	}()
+	return c.toDomain(art), nil
 }
 
 func (c *CachedArticleRepository) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error) {
@@ -47,6 +66,9 @@ func (c *CachedArticleRepository) GetByAuthor(ctx context.Context, uid int64, of
 		return c.toDomain(src)
 	})
 	go func() {
+		// 因为是异步，最好用一个新的context
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
 		// limit <= 100都可以缓存
 		if offset == 0 && limit == 100 {
 			// 缓存回写失败不一定是大问题，也可能是大问题
@@ -56,7 +78,22 @@ func (c *CachedArticleRepository) GetByAuthor(ctx context.Context, uid int64, of
 			}
 		}
 	}()
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		c.preCache(ctx, arts)
+	}()
 	return res, nil
+}
+
+func (c *CachedArticleRepository) preCache(ctx context.Context, arts []dao.Article) {
+	const size = 1024 * 1024
+	if len(arts) > 0 && len(arts[0].Content) <= size {
+		err := c.cache.Set(ctx, arts[0])
+		if err != nil {
+			// 记录日志
+		}
+	}
 }
 
 func (c *CachedArticleRepository) SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error {

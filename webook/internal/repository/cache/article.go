@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"geek-basic-go/webook/internal/domain"
+	"geek-basic-go/webook/internal/repository/dao"
 	"github.com/redis/go-redis/v9"
 	"time"
 )
@@ -13,10 +14,32 @@ type ArticleCache interface {
 	GetFirstPage(ctx context.Context, uid int64) ([]domain.Article, error)
 	SetFirstPage(ctx context.Context, uid int64, arts []domain.Article) error
 	DeleteFirstPage(ctx context.Context, uid int64) error
+	Get(ctx context.Context, id int64) (domain.Article, error)
+	Set(ctx context.Context, art dao.Article) error
 }
 
 type ArticleRedisCache struct {
 	client redis.Cmdable
+}
+
+func (a *ArticleRedisCache) Get(ctx context.Context, id int64) (domain.Article, error) {
+	val, err := a.client.Get(ctx, a.key(id)).Bytes()
+	if err != nil {
+		return domain.Article{}, err
+	}
+	var res domain.Article
+	err = json.Unmarshal(val, &res)
+	return res, err
+}
+
+func (a *ArticleRedisCache) Set(ctx context.Context, art dao.Article) error {
+	// JSON 序列化大部分场景，都不会引起性能问题
+	// 如果有性能问题,可以换一个序列化方法，可以使用protobuf，也可以考虑别的，例如 gob(Go Object Binary)
+	val, err := json.Marshal(art)
+	if err != nil {
+		return err
+	}
+	return a.client.Set(ctx, a.key(art.Id), val, time.Minute*1).Err()
 }
 
 func (a *ArticleRedisCache) DeleteFirstPage(ctx context.Context, uid int64) error {
@@ -55,4 +78,8 @@ func (a *ArticleRedisCache) SetFirstPage(ctx context.Context, uid int64, arts []
 
 func (a *ArticleRedisCache) firstKey(uid int64) string {
 	return fmt.Sprintf("article:first_page:%d", uid)
+}
+
+func (a *ArticleRedisCache) key(id int64) string {
+	return fmt.Sprintf("article:detail:%d", id)
 }
