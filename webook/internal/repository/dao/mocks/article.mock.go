@@ -10,6 +10,7 @@ package daomocks
 
 import (
 	context "context"
+	domain "geek-basic-go/webook/internal/domain"
 	dao "geek-basic-go/webook/internal/repository/dao"
 	reflect "reflect"
 
@@ -52,6 +53,35 @@ func (m *MockArticleDao) Insert(ctx context.Context, art dao.Article) (int64, er
 func (mr *MockArticleDaoMockRecorder) Insert(ctx, art any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockArticleDao)(nil).Insert), ctx, art)
+}
+
+// Sync mocks base method.
+func (m *MockArticleDao) Sync(ctx context.Context, art dao.Article) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Sync", ctx, art)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Sync indicates an expected call of Sync.
+func (mr *MockArticleDaoMockRecorder) Sync(ctx, art any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockArticleDao)(nil).Sync), ctx, art)
+}
+
+// SyncStatus mocks base method.
+func (m *MockArticleDao) SyncStatus(ctx context.Context, uid, id int64, status domain.ArticleStatus) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SyncStatus", ctx, uid, id, status)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SyncStatus indicates an expected call of SyncStatus.
+func (mr *MockArticleDaoMockRecorder) SyncStatus(ctx, uid, id, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncStatus", reflect.TypeOf((*MockArticleDao)(nil).SyncStatus), ctx, uid, id, status)
 }
 
 // UpdateById mocks base method.

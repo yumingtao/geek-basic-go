@@ -165,7 +165,7 @@ type Article struct {
 	Id       int64  `bson:"id,omitempty"`
 	Title    string `bson:"title,omitempty"`
 	Content  string `bson:"content,omitempty"`
-	AuthorId int64  `bson:"authorId,omitempty"`
+	AuthorId int64  `bson:"author_id,omitempty"`
 	Status   uint8  `bson:"status,omitempty"`
 	Ctime    int64  `bson:"ctime,omitempty"`
 	Utime    int64  `bson:"utime,omitempty"`

@@ -22,7 +22,7 @@ func InitWebServer() *gin.Engine {
 		thirdPartySet,
 		// Dao
 		dao.NewUserDao,
-		dao.NewArticleDao,
+		dao.NewGormDBArticleDao,
 		// Cache
 		cache.NewUserCache, cache.NewRedisCodeCache,
 		// repository
@@ -41,10 +41,9 @@ func InitWebServer() *gin.Engine {
 	return gin.Default()
 }
 
-func InitArticleHandler() *web.ArticleHandler {
+func InitArticleHandler(dao dao.ArticleDao) *web.ArticleHandler {
 	wire.Build(
 		thirdPartySet,
-		dao.NewArticleDao,
 		repository.NewArticleRepository,
 		service.NewArticleService,
 		web.NewArticleHandler,

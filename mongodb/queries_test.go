@@ -98,8 +98,8 @@ func (s *MongoDBTestSuite) TestAnd() {
 
 	/*filter := bson.M{
 		"$and": []bson.M{
-			{"authorId": 123},
-			{"authorId": 456},
+			{"author_id": 123},
+			{"author_id": 456},
 		},
 	}
 	findRes, err := s.col.Find(ctx, filter)*/
@@ -108,7 +108,7 @@ func (s *MongoDBTestSuite) TestAnd() {
 			bson.E{Key: "id", Value: 1},
 		},
 		bson.D{ // E的切片
-			bson.E{Key: "authorId", Value: 123},
+			bson.E{Key: "author_id", Value: 123},
 		},
 	}
 	findRes, err := s.col.Find(ctx, bson.D{bson.E{Key: "$and", Value: filter}})
@@ -125,7 +125,7 @@ func (s *MongoDBTestSuite) TestIn() {
 	defer cancel()
 
 	filter := bson.M{
-		"authorId": bson.M{
+		"author_id": bson.M{
 			"$in": []int{
 				123,
 				456,
@@ -149,7 +149,7 @@ func (s *MongoDBTestSuite) TestProjection() {
 	defer cancel()
 
 	filter := bson.M{
-		"authorId": bson.M{
+		"author_id": bson.M{
 			"$in": []int{
 				123,
 				456,
@@ -173,7 +173,7 @@ func (s *MongoDBTestSuite) TestIndexes() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	ires, err := s.col.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys:    bson.D{bson.E{"id", 1}},
+		Keys:    bson.D{bson.E{Key: "id", Value: 1}},
 		Options: options.Index().SetUnique(true).SetName("my_idx_id"),
 	})
 	assert.NoError(s.T(), err)

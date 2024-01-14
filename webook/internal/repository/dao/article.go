@@ -49,7 +49,7 @@ func (a *ArticleGormDao) SyncStatus(ctx context.Context, uid int64, id int64, st
 func (a *ArticleGormDao) Sync(ctx context.Context, art Article) (int64, error) {
 	var id = art.Id
 	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		dao := NewArticleDao(tx)
+		dao := NewGormDBArticleDao(tx)
 		var (
 			err error
 		)
@@ -90,7 +90,7 @@ func (a *ArticleGormDao) SyncV1(ctx context.Context, art Article) (int64, error)
 	}
 	// 防止后边业务panic
 	defer tx.Rollback()
-	dao := NewArticleDao(tx)
+	dao := NewGormDBArticleDao(tx)
 
 	var (
 		id  = art.Id
@@ -129,7 +129,7 @@ func (a *ArticleGormDao) SyncV1(ctx context.Context, art Article) (int64, error)
 	return id, nil
 }
 
-func NewArticleDao(db *gorm.DB) ArticleDao {
+func NewGormDBArticleDao(db *gorm.DB) ArticleDao {
 	return &ArticleGormDao{
 		db: db,
 	}
@@ -163,13 +163,13 @@ func (a *ArticleGormDao) UpdateById(ctx context.Context, art Article) error {
 }
 
 type Article struct {
-	Id       int64  `gorm:"primaryKey, autoIncrement"`
-	Title    string `gorm:"type=varchar(4096)"`
-	Content  string `gorm:type=BLOB`
-	AuthorId int64  `gorm:"index"`
-	Status   uint8
-	Ctime    int64
-	Utime    int64
+	Id       int64  `gorm:"primaryKey, autoIncrement" bson:"id,omitempty"`
+	Title    string `gorm:"type=varchar(4096)" bson:"title,omitempty"`
+	Content  string `gorm:"type=BLOB" bson:"content,omitempty"`
+	AuthorId int64  `gorm:"index" bson:"author_id,omitempty"`
+	Status   uint8  `bson:"status,omitempty"`
+	Ctime    int64  `bson:"ctime,omitempty"`
+	Utime    int64  `bson:"utime,omitempty"`
 }
 
 // PublishedArticle 衍生类型
