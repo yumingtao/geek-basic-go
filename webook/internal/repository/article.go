@@ -17,14 +17,45 @@ type ArticleRepository interface {
 	SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
+	GetPubById(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type CachedArticleRepository struct {
 	dao       dao.ArticleDao
 	cache     cache.ArticleCache
+	userRepo  UserRepository // repository 一般都有一些缓存
 	readerDao dao.ArticleReaderDao
 	authorDao dao.ArticleAuthorDao
 	db        *gorm.DB
+}
+
+func (c *CachedArticleRepository) GetPubById(ctx context.Context, id int64) (domain.Article, error) {
+	res, err := c.cache.GetPub(ctx, id)
+	if err == nil {
+		return res, err
+	}
+	art, err := c.dao.GetPubById(ctx, id)
+	if err != nil {
+		return domain.Article{}, err
+	}
+
+	res = c.toDomain(dao.Article(art))
+	author, err := c.userRepo.FindById(ctx, art.AuthorId)
+	if err != nil {
+		return domain.Article{}, err
+		// 下面要记录日志，因为吞掉了err
+		// return res, nil
+	}
+	res.Author.Name = author.NickName
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		err := c.cache.SetPub(ctx, res)
+		if err != nil {
+			// 记录日志
+		}
+	}()
+	return res, nil
 }
 
 func (c *CachedArticleRepository) GetById(ctx context.Context, id int64) (domain.Article, error) {
@@ -131,6 +162,25 @@ func (c *CachedArticleRepository) Sync(ctx context.Context, art domain.Article) 
 			// 记录日志
 		}
 	}
+	// 一发布的时候就尝试设置缓存
+	go func() {
+		// 设置一个新的context，摆脱整个链路的控制，让它有独立的超时时间
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		user, er := c.userRepo.FindById(ctx, art.Author.Id)
+		if er != nil {
+			// 记录日志
+		}
+		// 灵活设置过期时间,大V和普通创作者区分设置过期时间
+		art.Author = domain.Author{
+			Id:   user.Id,
+			Name: user.NickName,
+		}
+		er = c.cache.SetPub(ctx, art)
+		if er != nil {
+			// 记录日志
+		}
+	}()
 	return id, err
 }
 

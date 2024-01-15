@@ -34,6 +34,8 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	// List接口，一般是GET的，形如list?offset=?&limit=?, 这里定义成post，然后通过body接收参数
 	g.POST("/list", h.List)
 	g.GET("/detail/:id", h.Detail)
+	pub := g.Group("/pub")
+	pub.GET("/:id", h.PubDetail)
 }
 
 // Edit 返回article id
@@ -174,8 +176,8 @@ func toVo(art domain.Article) ArticleVo {
 }
 
 func (h *ArticleHandler) Detail(ctx *gin.Context) {
-	idstr := ctx.Param("id")
-	id, err := strconv.ParseInt(idstr, 10, 64)
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 4,
@@ -183,7 +185,7 @@ func (h *ArticleHandler) Detail(ctx *gin.Context) {
 		})
 		h.l.Warn("查找文章失败, id格式不对",
 			logger.Error(err),
-			logger.String("id", idstr))
+			logger.String("id", idStr))
 		return
 	}
 	art, err := h.svc.GetById(ctx, id)
@@ -221,5 +223,43 @@ func (h *ArticleHandler) Detail(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, Result{
 		Data: artVo,
+	})
+}
+
+func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "id参数错误",
+		})
+		h.l.Warn("查找文章失败, id格式不对",
+			logger.Error(err),
+			logger.String("id", idStr))
+		return
+	}
+	art, err := h.svc.GetPubById(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		h.l.Warn("查找文章失败, 系统错误",
+			logger.Error(err),
+			logger.Int64("id", id))
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Data: ArticleVo{
+			Id:         art.Id,
+			Title:      art.Title,
+			Content:    art.Content,
+			AuthorId:   art.Author.Id,
+			AuthorName: art.Author.Name,
+			Status:     art.Status.ToUint8(),
+			Ctime:      art.Ctime.Format(time.DateTime),
+			Utime:      art.Utime.Format(time.DateTime),
+		},
 	})
 }
