@@ -138,10 +138,11 @@ func (c *CachedArticleRepository) SyncStatus(ctx context.Context, uid int64, id 
 	return err
 }
 
-func NewArticleRepository(dao dao.ArticleDao, cache cache.ArticleCache) ArticleRepository {
+func NewArticleRepository(dao dao.ArticleDao, userRepo UserRepository, cache cache.ArticleCache) ArticleRepository {
 	return &CachedArticleRepository{
-		dao:   dao,
-		cache: cache,
+		dao:      dao,
+		cache:    cache,
+		userRepo: userRepo,
 	}
 }
 
@@ -278,7 +279,7 @@ func (c *CachedArticleRepository) toDomain(art dao.Article) domain.Article {
 		Title:   art.Title,
 		Content: art.Content,
 		Author: domain.Author{
-			Id: art.Id,
+			Id: art.AuthorId,
 		},
 		Status: domain.ArticleStatus(art.Status),
 		Ctime:  time.UnixMilli(art.Ctime),
