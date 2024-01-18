@@ -3,6 +3,7 @@ package dao
 import (
 	"context"
 	"errors"
+	"geek-basic-go/webook/internal/domain"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"
@@ -12,16 +13,68 @@ type ArticleDao interface {
 	Insert(ctx context.Context, art Article) (int64, error)
 	UpdateById(ctx context.Context, art Article) error
 	Sync(ctx context.Context, art Article) (int64, error)
+	SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error
+	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error)
+	GetById(ctx context.Context, id int64) (Article, error)
+	GetPubById(ctx context.Context, id int64) (PublishedArticle, error)
 }
 
 type ArticleGormDao struct {
 	db *gorm.DB
 }
 
+func (a *ArticleGormDao) GetPubById(ctx context.Context, id int64) (PublishedArticle, error) {
+	var res PublishedArticle
+	err := a.db.WithContext(ctx).Where("id=?", id).First(&res).Error
+	return res, err
+}
+
+func (a *ArticleGormDao) GetById(ctx context.Context, id int64) (Article, error) {
+	var art Article
+	err := a.db.WithContext(ctx).Where("id=?", id).First(&art).Error
+	return art, err
+}
+
+func (a *ArticleGormDao) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error) {
+	var arts []Article
+	err := a.db.WithContext(ctx).Where("author_id=?", uid).
+		Offset(offset).
+		Limit(limit).
+		Order("utime DESC").
+		Find(&arts).Error
+	return arts, err
+}
+
+func (a *ArticleGormDao) SyncStatus(ctx context.Context, uid int64, id int64, status domain.ArticleStatus) error {
+	now := time.Now().UnixMilli()
+	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&Article{}).
+			Where("id=? and author_id=?", id, uid).
+			Updates(map[string]any{
+				"utime":  now,
+				"status": status,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return errors.New("更新失败，ID不对或作者不对")
+		}
+
+		return tx.Model(&PublishedArticle{}).
+			Where("id=?", id).
+			Updates(map[string]any{
+				"utime":  now,
+				"status": status,
+			}).Error
+	})
+	return err
+}
+
 func (a *ArticleGormDao) Sync(ctx context.Context, art Article) (int64, error) {
 	var id = art.Id
 	err := a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		dao := NewArticleDao(tx)
+		dao := NewGormDBArticleDao(tx)
 		var (
 			err error
 		)
@@ -62,7 +115,7 @@ func (a *ArticleGormDao) SyncV1(ctx context.Context, art Article) (int64, error)
 	}
 	// 防止后边业务panic
 	defer tx.Rollback()
-	dao := NewArticleDao(tx)
+	dao := NewGormDBArticleDao(tx)
 
 	var (
 		id  = art.Id
@@ -90,6 +143,7 @@ func (a *ArticleGormDao) SyncV1(ctx context.Context, art Article) (int64, error)
 		DoUpdates: clause.Assignments(map[string]interface{}{
 			"title":   pubArt.Title,
 			"content": pubArt.Content,
+			"status":  pubArt.Status,
 			"utime":   now,
 		}),
 	}).Create(&pubArt).Error
@@ -100,7 +154,7 @@ func (a *ArticleGormDao) SyncV1(ctx context.Context, art Article) (int64, error)
 	return id, nil
 }
 
-func NewArticleDao(db *gorm.DB) ArticleDao {
+func NewGormDBArticleDao(db *gorm.DB) ArticleDao {
 	return &ArticleGormDao{
 		db: db,
 	}
@@ -121,6 +175,7 @@ func (a *ArticleGormDao) UpdateById(ctx context.Context, art Article) error {
 		Updates(map[string]any{
 			"title":   art.Title,
 			"content": art.Content,
+			"status":  art.Status,
 			"utime":   now,
 		})
 	if res.Error != nil {
@@ -133,13 +188,13 @@ func (a *ArticleGormDao) UpdateById(ctx context.Context, art Article) error {
 }
 
 type Article struct {
-	Id       int64  `gorm:"primaryKey, autoIncrement"`
-	Title    string `gorm:"type=varchar(4096)"`
-	Content  string `gorm:type=BLOB`
-	AuthorId int64  `gorm:"index"`
-	Status   int64
-	Ctime    int64
-	Utime    int64
+	Id       int64  `gorm:"primaryKey, autoIncrement" bson:"id,omitempty"`
+	Title    string `gorm:"type=varchar(4096)" bson:"title,omitempty"`
+	Content  string `gorm:"type=BLOB" bson:"content,omitempty"`
+	AuthorId int64  `gorm:"index" bson:"author_id,omitempty"`
+	Status   uint8  `bson:"status,omitempty"`
+	Ctime    int64  `bson:"ctime,omitempty"`
+	Utime    int64  `bson:"utime,omitempty"`
 }
 
 // PublishedArticle 衍生类型

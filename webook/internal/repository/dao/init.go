@@ -1,8 +1,45 @@
 package dao
 
-import "gorm.io/gorm"
+import (
+	"context"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/gorm"
+	"time"
+)
 
 func InitTables(db *gorm.DB) error {
 	// 理论上应该走db结构更改审批流程，这个不是优秀实践
 	return db.AutoMigrate(&User{}, &Article{})
+}
+
+func InitCollection(mdb *mongo.Database) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	col := mdb.Collection("articles")
+	_, err := col.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{bson.E{Key: "id", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.D{bson.E{Key: "author_id", Value: 1}},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	liveCol := mdb.Collection("published_articles")
+	_, err = liveCol.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{bson.E{Key: "id", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.D{bson.E{Key: "author_id", Value: 1}},
+		},
+	})
+	return err
 }

@@ -15,20 +15,31 @@ import (
 )
 
 var thirdPartySet = wire.NewSet(InitDB, InitRedis, InitLogger)
+var userSvcProvider = wire.NewSet(
+	dao.NewUserDao,
+	cache.NewUserCache,
+	repository.NewCachedUserRepository,
+	service.NewUserService,
+)
+var articleSvcProvider = wire.NewSet(
+	repository.NewArticleRepository,
+	cache.NewArticleRedisCache,
+	dao.NewGormDBArticleDao,
+	service.NewArticleService,
+)
 
 func InitWebServer() *gin.Engine {
 	wire.Build(
 		// 第三方依赖
 		thirdPartySet,
-		// Dao
-		dao.NewUserDao,
-		dao.NewArticleDao,
+		userSvcProvider,
+		articleSvcProvider,
 		// Cache
-		cache.NewUserCache, cache.NewRedisCodeCache,
+		cache.NewRedisCodeCache,
 		// repository
-		repository.NewCachedUserRepository, repository.NewCachedCodeRepository, repository.NewArticleRepository,
+		repository.NewCachedCodeRepository,
 		// service
-		ioc.InitSmsService, service.NewUserService, service.NewCodeService, service.NewArticleService,
+		ioc.InitSmsService, service.NewCodeService,
 		InitWechatService,
 		// handler
 		web.NewUserHandler,
@@ -41,10 +52,11 @@ func InitWebServer() *gin.Engine {
 	return gin.Default()
 }
 
-func InitArticleHandler() *web.ArticleHandler {
+func InitArticleHandler(dao dao.ArticleDao) *web.ArticleHandler {
 	wire.Build(
 		thirdPartySet,
-		dao.NewArticleDao,
+		userSvcProvider,
+		cache.NewArticleRedisCache,
 		repository.NewArticleRepository,
 		service.NewArticleService,
 		web.NewArticleHandler,

@@ -20,6 +20,14 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - "6379:6379"
+  mogo:
+    image: "mongo:7.0"
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
   etcd:
     image: "bitnami/etcd:latest"
     restart: always

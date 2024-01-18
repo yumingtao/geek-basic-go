@@ -20,9 +20,9 @@ func InitWebServer() *gin.Engine {
 		ioc.InitDB, ioc.InitRedis, ioc.InitLogger,
 		// Dao
 		dao.NewUserDao,
-		dao.NewArticleDao,
+		dao.NewGormDBArticleDao,
 		// Cache
-		cache.NewUserCache /*cache.NewRedisCodeCache,*/, cache.NewGoCacheCodeCache,
+		cache.NewUserCache /*cache.NewRedisCodeCache,*/, cache.NewGoCacheCodeCache, cache.NewArticleRedisCache,
 		// repository
 		repository.NewCachedUserRepository, repository.NewCachedCodeRepository, repository.NewArticleRepository,
 		// service
