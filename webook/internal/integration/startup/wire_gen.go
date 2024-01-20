@@ -41,7 +41,11 @@ func InitWebServer() *gin.Engine {
 	articleCache := cache.NewArticleRedisCache(cmdable)
 	articleRepository := repository.NewArticleRepository(articleDao, userRepository, articleCache)
 	articleService := service.NewArticleService(articleRepository)
-	articleHandler := web.NewArticleHandler(articleService, loggerV1)
+	interactiveDao := dao.NewGormInteractiveDao(db)
+	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, interactiveCache)
+	interactiveService := service.NewInteractiveServiceImpl(interactiveRepository)
+	articleHandler := web.NewArticleHandler(articleService, interactiveService, loggerV1)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
 	return engine
 }
@@ -55,9 +59,23 @@ func InitArticleHandler(dao2 dao.ArticleDao) *web.ArticleHandler {
 	articleCache := cache.NewArticleRedisCache(cmdable)
 	articleRepository := repository.NewArticleRepository(dao2, userRepository, articleCache)
 	articleService := service.NewArticleService(articleRepository)
+	interactiveDao := dao.NewGormInteractiveDao(db)
+	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, interactiveCache)
+	interactiveService := service.NewInteractiveServiceImpl(interactiveRepository)
 	loggerV1 := InitLogger()
-	articleHandler := web.NewArticleHandler(articleService, loggerV1)
+	articleHandler := web.NewArticleHandler(articleService, interactiveService, loggerV1)
 	return articleHandler
+}
+
+func InitInteractiveService() service.InteractiveService {
+	db := InitDB()
+	interactiveDao := dao.NewGormInteractiveDao(db)
+	cmdable := InitRedis()
+	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, interactiveCache)
+	interactiveService := service.NewInteractiveServiceImpl(interactiveRepository)
+	return interactiveService
 }
 
 // wire.go:
@@ -67,3 +85,5 @@ var thirdPartySet = wire.NewSet(InitDB, InitRedis, InitLogger)
 var userSvcProvider = wire.NewSet(dao.NewUserDao, cache.NewUserCache, repository.NewCachedUserRepository, service.NewUserService)
 
 var articleSvcProvider = wire.NewSet(repository.NewArticleRepository, cache.NewArticleRedisCache, dao.NewGormDBArticleDao, service.NewArticleService)
+
+var interactiveSvcSet = wire.NewSet(dao.NewGormInteractiveDao, cache.NewInteractiveRedisCache, repository.NewCachedInteractiveRepository, service.NewInteractiveServiceImpl)

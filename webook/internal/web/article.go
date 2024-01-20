@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"geek-basic-go/webook/internal/domain"
 	"geek-basic-go/webook/internal/service"
 	"geek-basic-go/webook/internal/web/jwt"
@@ -13,14 +14,20 @@ import (
 )
 
 type ArticleHandler struct {
-	svc service.ArticleService
-	l   logger.LoggerV1
+	svc     service.ArticleService
+	intrSvc service.InteractiveService
+	l       logger.LoggerV1
+	biz     string
 }
 
-func NewArticleHandler(svc service.ArticleService, l logger.LoggerV1) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService,
+	intrSvc service.InteractiveService,
+	l logger.LoggerV1) *ArticleHandler {
 	return &ArticleHandler{
-		svc: svc,
-		l:   l,
+		svc:     svc,
+		intrSvc: intrSvc,
+		l:       l,
+		biz:     "article",
 	}
 }
 
@@ -250,6 +257,19 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			logger.Int64("id", id))
 		return
 	}
+	go func() {
+		// 1. 如果需要摆脱原本主链路的超时控制，创建一个新的
+		// 2. 也可以直接只用ctx，由主链路来控制超时
+		newCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		er := h.intrSvc.IncrReadCnt(newCtx, h.biz, art.Id)
+		if er != nil {
+			h.l.Error("更新阅读数失败",
+				logger.Int64("aid", art.Id),
+				logger.Error(er))
+		}
+
+	}()
 	ctx.JSON(http.StatusOK, Result{
 		Data: ArticleVo{
 			Id:         art.Id,

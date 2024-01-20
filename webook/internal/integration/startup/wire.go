@@ -28,12 +28,20 @@ var articleSvcProvider = wire.NewSet(
 	service.NewArticleService,
 )
 
+var interactiveSvcSet = wire.NewSet(
+	dao.NewGormInteractiveDao,
+	cache.NewInteractiveRedisCache,
+	repository.NewCachedInteractiveRepository,
+	service.NewInteractiveServiceImpl,
+)
+
 func InitWebServer() *gin.Engine {
 	wire.Build(
 		// 第三方依赖
 		thirdPartySet,
 		userSvcProvider,
 		articleSvcProvider,
+		interactiveSvcSet,
 		// Cache
 		cache.NewRedisCodeCache,
 		// repository
@@ -56,10 +64,16 @@ func InitArticleHandler(dao dao.ArticleDao) *web.ArticleHandler {
 	wire.Build(
 		thirdPartySet,
 		userSvcProvider,
+		interactiveSvcSet,
 		cache.NewArticleRedisCache,
 		repository.NewArticleRepository,
 		service.NewArticleService,
 		web.NewArticleHandler,
 	)
 	return &web.ArticleHandler{}
+}
+
+func InitInteractiveService() service.InteractiveService {
+	wire.Build(thirdPartySet, interactiveSvcSet)
+	return service.NewInteractiveServiceImpl(nil)
 }
