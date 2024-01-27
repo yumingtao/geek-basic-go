@@ -43,7 +43,7 @@ func InitWebServer() *gin.Engine {
 	articleService := service.NewArticleService(articleRepository)
 	interactiveDao := dao.NewGormInteractiveDao(db)
 	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
-	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, interactiveCache)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, loggerV1, interactiveCache)
 	interactiveService := service.NewInteractiveServiceImpl(interactiveRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactiveService, loggerV1)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
@@ -60,10 +60,10 @@ func InitArticleHandler(dao2 dao.ArticleDao) *web.ArticleHandler {
 	articleRepository := repository.NewArticleRepository(dao2, userRepository, articleCache)
 	articleService := service.NewArticleService(articleRepository)
 	interactiveDao := dao.NewGormInteractiveDao(db)
-	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
-	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, interactiveCache)
-	interactiveService := service.NewInteractiveServiceImpl(interactiveRepository)
 	loggerV1 := InitLogger()
+	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, loggerV1, interactiveCache)
+	interactiveService := service.NewInteractiveServiceImpl(interactiveRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactiveService, loggerV1)
 	return articleHandler
 }
@@ -71,9 +71,10 @@ func InitArticleHandler(dao2 dao.ArticleDao) *web.ArticleHandler {
 func InitInteractiveService() service.InteractiveService {
 	db := InitDB()
 	interactiveDao := dao.NewGormInteractiveDao(db)
+	loggerV1 := InitLogger()
 	cmdable := InitRedis()
 	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
-	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, interactiveCache)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, loggerV1, interactiveCache)
 	interactiveService := service.NewInteractiveServiceImpl(interactiveRepository)
 	return interactiveService
 }

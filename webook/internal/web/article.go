@@ -8,6 +8,7 @@ import (
 	"geek-basic-go/webook/pkg/logger"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/sync/errgroup"
 	"net/http"
 	"strconv"
 	"time"
@@ -248,7 +249,27 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			logger.String("id", idStr))
 		return
 	}
-	art, err := h.svc.GetPubById(ctx, id)
+
+	var (
+		eg   errgroup.Group
+		intr domain.Interactive
+		art  domain.Article
+	)
+	eg.Go(func() error {
+		var er error
+		art, er = h.svc.GetPubById(ctx, id)
+		return er
+	})
+
+	uc := ctx.MustGet("user").(jwt.UserClaims)
+	eg.Go(func() error {
+		var er error
+		intr, er = h.intrSvc.Get(ctx, h.biz, id, uc.Uid)
+		return er
+	})
+
+	// 等待结果
+	err = eg.Wait()
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -259,6 +280,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			logger.Int64("id", id))
 		return
 	}
+
 	go func() {
 		// 1. 如果需要摆脱原本主链路的超时控制，创建一个新的
 		// 2. 也可以直接只用ctx，由主链路来控制超时
@@ -279,9 +301,16 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			Content:    art.Content,
 			AuthorId:   art.Author.Id,
 			AuthorName: art.Author.Name,
-			Status:     art.Status.ToUint8(),
-			Ctime:      art.Ctime.Format(time.DateTime),
-			Utime:      art.Utime.Format(time.DateTime),
+
+			ReadCnt:    intr.ReadCnt,
+			LikeCnt:    intr.LikeCnt,
+			CollectCnt: intr.CollectCnt,
+			Liked:      intr.Liked,
+			Collected:  intr.Collected,
+
+			Status: art.Status.ToUint8(),
+			Ctime:  art.Ctime.Format(time.DateTime),
+			Utime:  art.Utime.Format(time.DateTime),
 		},
 	})
 }

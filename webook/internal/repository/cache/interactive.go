@@ -4,7 +4,10 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"geek-basic-go/webook/internal/domain"
 	"github.com/redis/go-redis/v9"
+	"strconv"
+	"time"
 )
 
 var (
@@ -21,10 +24,44 @@ type InteractiveCache interface {
 	IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	DecrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	IncrCollectCntIfPresent(ctx context.Context, biz string, id int64) error
+	Get(ctx context.Context, biz string, bizId int64) (domain.Interactive, error)
+	Set(ctx context.Context, biz string, bizId int64, intr domain.Interactive) error
 }
 
 type InteractiveRedisCache struct {
 	client redis.Cmdable
+}
+
+func (i *InteractiveRedisCache) Get(ctx context.Context, biz string, bizId int64) (domain.Interactive, error) {
+	key := i.key(biz, bizId)
+	res, err := i.client.HGetAll(ctx, key).Result()
+	if err != nil {
+		return domain.Interactive{}, err
+	}
+	if len(res) == 0 {
+		return domain.Interactive{}, ErrKeyNotExist
+	}
+	readCnt, _ := strconv.ParseInt(res[fieldReadCnt], 10, 64)
+	likeCnt, _ := strconv.ParseInt(res[fieldLikeCnt], 10, 64)
+	collectCnt, _ := strconv.ParseInt(res[fieldCollectCnt], 10, 64)
+	return domain.Interactive{
+		ReadCnt:    readCnt,
+		LikeCnt:    likeCnt,
+		CollectCnt: collectCnt,
+	}, nil
+}
+
+func (i *InteractiveRedisCache) Set(ctx context.Context, biz string, bizId int64, intr domain.Interactive) error {
+	key := i.key(biz, bizId)
+	err := i.client.HSet(ctx, key,
+		fieldReadCnt, intr.ReadCnt,
+		fieldLikeCnt, intr.LikeCnt,
+		fieldCollectCnt, intr.CollectCnt,
+	).Err()
+	if err != nil {
+		return err
+	}
+	return i.client.Expire(ctx, key, time.Minute*13).Err()
 }
 
 func NewInteractiveRedisCache(client redis.Cmdable) InteractiveCache {
