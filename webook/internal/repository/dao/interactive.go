@@ -11,6 +11,7 @@ type InteractiveDao interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	InsertLikeInfo(ctx context.Context, biz string, aid int64, uid int64) error
 	DeleteLikeInfo(ctx context.Context, biz string, aid int64, uid int64) error
+	InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error
 }
 
 type GormInteractiveDao struct {
@@ -21,6 +22,31 @@ func NewGormInteractiveDao(db *gorm.DB) InteractiveDao {
 	return &GormInteractiveDao{
 		db: db,
 	}
+}
+
+func (dao *GormInteractiveDao) InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error {
+	now := time.Now().UnixMilli()
+	cb.Ctime = now
+	cb.Utime = now
+	err := dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Create(&cb).Error
+		if err != nil {
+			return err
+		}
+		return tx.WithContext(ctx).Clauses(clause.OnConflict{DoUpdates: clause.Assignments(map[string]interface{}{
+			"collect_cnt": gorm.Expr("`collect_cnt` + 1"),
+			"utime":       now,
+		}),
+		}).Create(&Interactive{
+			Biz:        cb.Biz,
+			BizId:      cb.BizId,
+			CollectCnt: 1,
+			Ctime:      now,
+			Utime:      now,
+		}).Error
+	})
+
+	return err
 }
 
 func (dao *GormInteractiveDao) InsertLikeInfo(ctx context.Context, biz string, aid int64, uid int64) error {
@@ -118,4 +144,14 @@ type UserLikeBiz struct {
 	Status int
 	Ctime  int64
 	Utime  int64
+}
+
+type UserCollectionBiz struct {
+	Id    int64  `gorm:"primaryKey,autoincrement"`
+	Uid   int64  `gorm:"uniqueIndex:uid_biz_type_id"`
+	BizId int64  `gorm:"uniqueIndex:uid_biz_type_id"`
+	Biz   string `gorm:"uniqueIndex:uid_biz_type_id;type:varchar(128)"`
+	Cid   int64  `gorm:"index"` //收藏夹id，本身有索引
+	Ctime int64
+	Utime int64
 }

@@ -44,6 +44,7 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	pub := g.Group("/pub")
 	pub.GET("/:id", h.PubDetail)
 	pub.POST("/like", h.Like)
+	pub.POST("/collect", h.Collect)
 }
 
 // Edit 返回article id
@@ -309,6 +310,33 @@ func (h *ArticleHandler) Like(ctx *gin.Context) {
 			Msg:  "系统异常",
 		})
 		h.l.Error("点赞/取消点赞失败",
+			logger.Error(err),
+			logger.Int64("uid", uc.Uid),
+			logger.Int64("aid", req.Id))
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "OK",
+	})
+}
+
+func (h *ArticleHandler) Collect(ctx *gin.Context) {
+	type Req struct {
+		Id  int64 `json:"id"`
+		Cid int64 `json:"cid"` //收藏夹id
+	}
+	var req Req
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	uc := ctx.MustGet("user").(jwt.UserClaims)
+	err := h.intrSvc.Collect(ctx, h.biz, req.Id, req.Cid, uc.Uid)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统异常",
+		})
+		h.l.Error("收藏失败",
 			logger.Error(err),
 			logger.Int64("uid", uc.Uid),
 			logger.Int64("aid", req.Id))
