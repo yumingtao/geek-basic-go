@@ -43,6 +43,7 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g.GET("/detail/:id", h.Detail)
 	pub := g.Group("/pub")
 	pub.GET("/:id", h.PubDetail)
+	pub.POST("/like", h.Like)
 }
 
 // Edit 返回article id
@@ -281,5 +282,39 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			Ctime:      art.Ctime.Format(time.DateTime),
 			Utime:      art.Utime.Format(time.DateTime),
 		},
+	})
+}
+
+func (h *ArticleHandler) Like(ctx *gin.Context) {
+	type Req struct {
+		Id   int64 `json:"id"`
+		Like bool  `json:"like"` //ture 点赞，false 不点赞
+	}
+	var req Req
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	uc := ctx.MustGet("user").(jwt.UserClaims)
+	var err error
+	if req.Like {
+		// 点赞
+		err = h.intrSvc.Like(ctx, h.biz, req.Id, uc.Uid)
+	} else {
+		//取消点赞
+		err = h.intrSvc.CancelLike(ctx, h.biz, req.Id, uc.Uid)
+	}
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统异常",
+		})
+		h.l.Error("点赞/取消点赞失败",
+			logger.Error(err),
+			logger.Int64("uid", uc.Uid),
+			logger.Int64("aid", req.Id))
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "OK",
 	})
 }

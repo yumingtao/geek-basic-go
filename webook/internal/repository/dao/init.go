@@ -11,7 +11,13 @@ import (
 
 func InitTables(db *gorm.DB) error {
 	// 理论上应该走db结构更改审批流程，这个不是优秀实践
-	return db.AutoMigrate(&User{}, &Article{}, &Interactive{})
+	return db.AutoMigrate(
+		&User{},
+		&Article{},
+		&PublishedArticle{},
+		&Interactive{},
+		&UserLikeBiz{},
+	)
 }
 
 func InitCollection(mdb *mongo.Database) error {
