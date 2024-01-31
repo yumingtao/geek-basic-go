@@ -146,3 +146,4 @@
 - [gomock](https://github.com/uber-go/mock)
 - [go-sqlmock](https://github.com/DATA-DOG/go-sqlmock)
 - [viper](https://github.com/spf13/viper)
+- [kafka go sdk - sarama](https://github.com/IBM/sarama/)
