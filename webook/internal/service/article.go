@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"geek-basic-go/webook/internal/domain"
+	"geek-basic-go/webook/internal/events/article"
 	"geek-basic-go/webook/internal/repository"
 	"geek-basic-go/webook/pkg/logger"
 )
@@ -14,18 +15,36 @@ type ArticleService interface {
 	Withdraw(ctx context.Context, uid int64, id int64) error
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
-	GetPubById(ctx context.Context, id int64) (domain.Article, error)
+	GetPubById(ctx context.Context, id int64, uid int64) (domain.Article, error)
 }
 
 type ArticleServiceImpl struct {
-	repo       repository.ArticleRepository
+	repo     repository.ArticleRepository
+	producer article.Producer
+	// v1的写法
 	readerRepo repository.ArticleReaderRepository
 	authorRepo repository.ArticleAuthorRepository
-	l          logger.LoggerV1
+
+	l logger.LoggerV1
 }
 
-func (a *ArticleServiceImpl) GetPubById(ctx context.Context, id int64) (domain.Article, error) {
-	return a.repo.GetPubById(ctx, id)
+func (a *ArticleServiceImpl) GetPubById(ctx context.Context, id int64, uid int64) (domain.Article, error) {
+	res, err := a.repo.GetPubById(ctx, id)
+	go func() {
+		if err == nil {
+			er := a.producer.ProduceReadEvent(article.ReadEvent{
+				Aid: id,
+				Uid: uid,
+			})
+			if er != nil {
+				a.l.Error("发送 ReadEvent 失败",
+					logger.Int64("aid", id),
+					logger.Int64("uid", uid),
+					logger.Error(er))
+			}
+		}
+	}()
+	return res, err
 }
 
 func (a *ArticleServiceImpl) GetById(ctx context.Context, id int64) (domain.Article, error) {
@@ -51,9 +70,11 @@ func NewArticleServiceV1(
 	}
 }
 
-func NewArticleService(repo repository.ArticleRepository) ArticleService {
+func NewArticleService(repo repository.ArticleRepository,
+	producer article.Producer) ArticleService {
 	return &ArticleServiceImpl{
-		repo: repo,
+		repo:     repo,
+		producer: producer,
 	}
 }
 

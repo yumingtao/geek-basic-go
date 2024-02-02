@@ -3,6 +3,7 @@
 package main
 
 import (
+	"geek-basic-go/webook/internal/events/article"
 	"geek-basic-go/webook/internal/repository"
 	"geek-basic-go/webook/internal/repository/cache"
 	"geek-basic-go/webook/internal/repository/dao"
@@ -10,17 +11,28 @@ import (
 	"geek-basic-go/webook/internal/web"
 	ijwt "geek-basic-go/webook/internal/web/jwt"
 	"geek-basic-go/webook/ioc"
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
 
-func InitWebServer() *gin.Engine {
+var interactiveSvcSet = wire.NewSet(
+	dao.NewGormInteractiveDao,
+	cache.NewInteractiveRedisCache,
+	repository.NewCachedInteractiveRepository,
+	service.NewInteractiveServiceImpl,
+)
+
+func InitWebServer() *App {
 	wire.Build(
 		// 第三方依赖
 		ioc.InitDB, ioc.InitRedis, ioc.InitLogger,
+		ioc.InitSaramaClient,
+		ioc.InitSyncProducer,
 		// Dao
 		dao.NewUserDao,
 		dao.NewGormDBArticleDao,
+
+		interactiveSvcSet,
+		article.NewSaramaSyncProducer, article.NewInteractiveReadEventConsumer, ioc.InitConsumers,
 		// Cache
 		cache.NewUserCache /*cache.NewRedisCodeCache,*/, cache.NewGoCacheCodeCache, cache.NewArticleRedisCache,
 		// repository
@@ -35,6 +47,7 @@ func InitWebServer() *gin.Engine {
 		web.NewArticleHandler,
 		ioc.InitGinMiddlewares,
 		ioc.InitWebServer,
+		wire.Struct(new(App), "*"),
 	)
-	return gin.Default()
+	return new(App)
 }
