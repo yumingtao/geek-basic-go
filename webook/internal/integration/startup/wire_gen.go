@@ -7,6 +7,7 @@
 package startup
 
 import (
+	"geek-basic-go/webook/internal/events/article"
 	"geek-basic-go/webook/internal/repository"
 	"geek-basic-go/webook/internal/repository/cache"
 	"geek-basic-go/webook/internal/repository/dao"
@@ -40,7 +41,10 @@ func InitWebServer() *gin.Engine {
 	articleDao := dao.NewGormDBArticleDao(db)
 	articleCache := cache.NewArticleRedisCache(cmdable)
 	articleRepository := repository.NewArticleRepository(articleDao, userRepository, articleCache)
-	articleService := service.NewArticleService(articleRepository)
+	client := InitSaramaClient()
+	syncProducer := InitSyncProducer(client)
+	producer := article.NewSaramaSyncProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, producer)
 	interactiveDao := dao.NewGormInteractiveDao(db)
 	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
 	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, loggerV1, interactiveCache)
@@ -58,7 +62,10 @@ func InitArticleHandler(dao2 dao.ArticleDao) *web.ArticleHandler {
 	userRepository := repository.NewCachedUserRepository(userDao, userCache)
 	articleCache := cache.NewArticleRedisCache(cmdable)
 	articleRepository := repository.NewArticleRepository(dao2, userRepository, articleCache)
-	articleService := service.NewArticleService(articleRepository)
+	client := InitSaramaClient()
+	syncProducer := InitSyncProducer(client)
+	producer := article.NewSaramaSyncProducer(syncProducer)
+	articleService := service.NewArticleService(articleRepository, producer)
 	interactiveDao := dao.NewGormInteractiveDao(db)
 	loggerV1 := InitLogger()
 	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
@@ -81,7 +88,13 @@ func InitInteractiveService() service.InteractiveService {
 
 // wire.go:
 
-var thirdPartySet = wire.NewSet(InitDB, InitRedis, InitLogger)
+var thirdPartySet = wire.NewSet(
+	InitDB,
+	InitRedis,
+	InitLogger,
+	InitSaramaClient,
+	InitSyncProducer,
+)
 
 var userSvcProvider = wire.NewSet(dao.NewUserDao, cache.NewUserCache, repository.NewCachedUserRepository, service.NewUserService)
 

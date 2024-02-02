@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"geek-basic-go/webook/internal/domain"
 	"geek-basic-go/webook/internal/service"
 	"geek-basic-go/webook/internal/web/jwt"
@@ -255,13 +254,13 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 		intr domain.Interactive
 		art  domain.Article
 	)
+	uc := ctx.MustGet("user").(jwt.UserClaims)
 	eg.Go(func() error {
 		var er error
-		art, er = h.svc.GetPubById(ctx, id)
+		art, er = h.svc.GetPubById(ctx, id, uc.Uid)
 		return er
 	})
 
-	uc := ctx.MustGet("user").(jwt.UserClaims)
 	eg.Go(func() error {
 		var er error
 		intr, er = h.intrSvc.Get(ctx, h.biz, id, uc.Uid)
@@ -280,8 +279,8 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 			logger.Int64("id", id))
 		return
 	}
-
-	go func() {
+	// 在service通过kafka传递消息，这里不需要了
+	/*go func() {
 		// 1. 如果需要摆脱原本主链路的超时控制，创建一个新的
 		// 2. 也可以直接只用ctx，由主链路来控制超时
 		newCtx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -293,7 +292,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context) {
 				logger.Error(er))
 		}
 
-	}()
+	}()*/
 	ctx.JSON(http.StatusOK, Result{
 		Data: ArticleVo{
 			Id:         art.Id,

@@ -3,6 +3,7 @@
 package startup
 
 import (
+	"geek-basic-go/webook/internal/events/article"
 	"geek-basic-go/webook/internal/repository"
 	"geek-basic-go/webook/internal/repository/cache"
 	"geek-basic-go/webook/internal/repository/dao"
@@ -14,7 +15,13 @@ import (
 	"github.com/google/wire"
 )
 
-var thirdPartySet = wire.NewSet(InitDB, InitRedis, InitLogger)
+var thirdPartySet = wire.NewSet(
+	InitDB,
+	InitRedis,
+	InitLogger,
+	InitSaramaClient,
+	InitSyncProducer,
+)
 var userSvcProvider = wire.NewSet(
 	dao.NewUserDao,
 	cache.NewUserCache,
@@ -46,6 +53,7 @@ func InitWebServer() *gin.Engine {
 		cache.NewRedisCodeCache,
 		// repository
 		repository.NewCachedCodeRepository,
+		article.NewSaramaSyncProducer,
 		// service
 		ioc.InitSmsService, service.NewCodeService,
 		InitWechatService,
@@ -68,6 +76,7 @@ func InitArticleHandler(dao dao.ArticleDao) *web.ArticleHandler {
 		cache.NewArticleRedisCache,
 		repository.NewArticleRepository,
 		service.NewArticleService,
+		article.NewSaramaSyncProducer,
 		web.NewArticleHandler,
 	)
 	return &web.ArticleHandler{}

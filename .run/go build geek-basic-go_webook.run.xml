@@ -1,0 +1,15 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build geek-basic-go/webook" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
+    <module name="geek-basic-go" />
+    <working_directory value="$PROJECT_DIR$/webook" />
+    <envs>
+      <env name="WECHAT_APP_ID" value="12" />
+      <env name="WECHAT_APP_SECRET" value="123" />
+    </envs>
+    <kind value="PACKAGE" />
+    <package value="geek-basic-go/webook" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/webook/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

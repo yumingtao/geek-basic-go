@@ -34,7 +34,14 @@ func main() {
 	//initViperRemote()
 	//initViperWatch()
 	initLogger()
-	server := InitWebServer()
+	app := InitWebServer()
+	for _, c := range app.consumers {
+		err := c.Start()
+		if err != nil {
+			panic(err)
+		}
+	}
+	server := app.server
 	server.GET("/hello", func(context *gin.Context) {
 		// context核心职责：处理请求，返回响应
 		context.String(http.StatusOK, "Hello, World!")
