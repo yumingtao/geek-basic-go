@@ -1,0 +1,38 @@
+@startuml "缓存命中"
+autonumber
+
+ArticleApi -> TopLikedService: Gets top N liked articles request
+TopLikedService -> TopLikedLocalCache: Gets top N liked articles
+TopLikedLocalCache --> TopLikedService: Gets top N liked articles response
+alt local cache has no data
+TopLikedService -> TopLikedRedisCache: Gets top N liked articles
+TopLikedRedisCache --> TopLikedService: Gets top N liked articles response
+end
+TopLikedService --> ArticleApi: Gets top N liked articles response
+@enduml
+
+
+@startuml "缓存未命中，需要数据库计算"
+autonumber
+
+ArticleApi -> TopLikedService: Gets top N liked articles request
+TopLikedService -> TopLikedLocalCache: Gets top N liked articles
+TopLikedLocalCache --> TopLikedService: Gets top N liked articles response
+alt local cache has no data
+    TopLikedService -> TopLikedRedisCache: Gets top N liked articles
+    TopLikedRedisCache --> TopLikedService: Gets top N liked articles response
+    alt Redis has no data
+        TopLikedService -> InteractiveRepository: Gets top N liked request
+        InteractiveRepository --> TopLikedService: Gets top N liked request response
+        loop Gets article by id
+            TopLikedService -> ArticleRepository: Gets article by id
+            ArticleRepository --> TopLikedService: Gets article by id response
+        end
+        TopLikedService -> TopLikedService: Composites response data
+        TopLikedService -> TopLikedLocalCache: Updates local cache
+        TopLikedService -> TopLikedRedisCache: Updates redis cache
+    end
+
+end
+TopLikedService --> ArticleApi: Gets top N liked articles response
+@enduml
