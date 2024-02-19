@@ -15,10 +15,20 @@ type InteractiveDao interface {
 	Get(ctx context.Context, biz string, id int64) (Interactive, error)
 	GetLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserLikeBiz, error)
 	GetCollectInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserCollectionBiz, error)
+	GetTopLikedList(ctx context.Context, n int) ([]Interactive, error)
 }
 
 type GormInteractiveDao struct {
 	db *gorm.DB
+}
+
+func (dao *GormInteractiveDao) GetTopLikedList(ctx context.Context, n int) ([]Interactive, error) {
+	var res []Interactive
+	err := dao.db.WithContext(ctx).
+		Order("like_cnt DESC").
+		Limit(n).
+		Find(&res).Error
+	return res, err
 }
 
 func (dao *GormInteractiveDao) GetLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserLikeBiz, error) {
@@ -166,7 +176,7 @@ type UserLikeBiz struct {
 	Uid    int64  `gorm:"uniqueIndex:uid_biz_type_id"`
 	BizId  int64  `gorm:"uniqueIndex:uid_biz_type_id"`
 	Biz    string `gorm:"uniqueIndex:uid_biz_type_id;type:varchar(128)"`
-	Status int
+	Status int    // 逻辑删除状态0表示删除，1表示未删除
 	Ctime  int64
 	Utime  int64
 }

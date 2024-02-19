@@ -21,6 +21,14 @@ var interactiveSvcSet = wire.NewSet(
 	service.NewInteractiveServiceImpl,
 )
 
+var topLikedSvcSet = wire.NewSet(
+	cache.NewTopLikedRedisCache,
+	cache.NewTopLikedLocalCache,
+	ioc.InitRLockClient,
+	repository.NewCachedTopLikedRepository,
+	service.NewTopLikedServiceImpl,
+)
+
 func InitWebServer() *App {
 	wire.Build(
 		// 第三方依赖
@@ -32,6 +40,7 @@ func InitWebServer() *App {
 		dao.NewGormDBArticleDao,
 
 		interactiveSvcSet,
+		topLikedSvcSet,
 		article.NewSaramaSyncProducer, article.NewInteractiveReadEventConsumer, ioc.InitConsumers,
 		// Cache
 		cache.NewUserCache /*cache.NewRedisCodeCache,*/, cache.NewGoCacheCodeCache, cache.NewArticleRedisCache,

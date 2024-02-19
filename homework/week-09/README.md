@@ -19,7 +19,7 @@
   - 需要加分布式锁，来避免高并发时，缓存穿透，给数据库带来巨大压力甚至压垮
   - 没有拿到分布式锁的线程可以直接返回本地缓存中数据
   - 数据库重新计算top N数据之后，先更新本地缓存，再更新Redis缓存
-- 可选，因为需要循环N次去查询article，会比较耗时，可以用定时任务异步处理：
+- 可选，查询出top n的数据后，需要通过article id批量去查询article，可能会比较耗时，可以用定时任务异步处理：
   - 通过定时程序计算数据库点赞前N条数据，并更新Redis缓存，定时任务执行时间可根据产品经理要求设置，如5分钟
   - 如果使用定时任务处理，可以考虑设置Redis缓存数据永不过期
 
@@ -37,10 +37,70 @@
 ![img.png](seq-缓存命中.png)
 #### 缓存未命中
 ![img.png](seq-缓存未命中.png)
-## 核心代码说明
+## 核心代码改动
+```
+webook/internal/domain/Interactive.go
+webook/internal/repository/cache/top_liked.go
+webook/internal/repository/cache/top_liked_local.go
+webook/internal/repository/dao/article.go
+webook/internal/repository/dao/interactive.go
+webook/internal/repository/interactive.go
+webook/internal/repository/top_liked.go
+webook/internal/service/top_liked.go
+webook/internal/web/article.go
+```
 
+## 测试数据
+```sql
+insert into webook.interactives (read_cnt, like_cnt, collect_cnt, ctime, utime, biz_id, biz)
+values  (30, 24, 4, 1234567, 1234567, 1, 'test'),
+        (50, 30, 28, 1234567, 1234567, 2, 'test'),
+        (20, 10, 18, 1234567, 1234567, 3, 'test'),
+        (27, 17, 12, 1234567, 1234567, 4, 'test'),
+        (29, 12, 15, 1234567, 1234567, 5, 'test'),
+        (68, 62, 58, 1234567, 1234567, 6, 'test'),
+        (107, 77, 54, 1234567, 1234567, 7, 'test'),
+        (56, 47, 31, 1234567, 1234567, 8, 'test'),
+        (34, 27, 23, 1234567, 1234567, 9, 'test'),
+        (76, 17, 13, 1234567, 1234567, 10, 'test'),
+        (127, 117, 123, 1234567, 1234567, 11, 'test'),
+        (95, 87, 83, 1234567, 1234567, 12, 'test'),
+        (26, 27, 23, 1234567, 1234567, 13, 'test'),
+        (86, 37, 33, 1234567, 1234567, 14, 'test');
+
+insert into webook.articles (title, content, author_id, ctime, utime, status)
+values  ('test', 'This is a test 2', 122, 1234567, 1234567, 2),
+        ('test', 'This is a test 1', 121, 1234567, 1234567, 2),
+        ('test', 'This is a test 3', 123, 1234567, 1234567, 2),
+        ('test', 'This is a test 4', 124, 1234567, 1234567, 2),
+        ('test', 'This is a test 5', 125, 1234567, 1234567, 2),
+        ('test', 'This is a test 6', 126, 1234567, 1234567, 2),
+        ('test', 'This is a test 7', 127, 1234567, 1234567, 2),
+        ('test', 'This is a test 8', 128, 1234567, 1234567, 2),
+        ('test', 'This is a test 9', 129, 1234567, 1234567, 2),
+        ('test', 'This is a test 10', 111, 1234567, 1234567, 2),
+        ('test', 'This is a test 11', 112, 1234567, 1234567, 2),
+        ('test', 'This is a test 12', 113, 1234567, 1234567, 2),
+        ('test', 'This is a test 13', 114, 1234567, 1234567, 2),
+        ('test', 'This is a test 14', 115, 1234567, 1234567, 2);
+```
 ## 性能测试
 ### 测试机参数
-
+- CPU: Apple M1 Pro
+- Memory: 16G
 ### 测试结果
-
+#### 10秒并发50，持续30秒
+```shell
+wrk -t10 -c50 -d30s --header 'User-Agent: PostmanRuntime/7.36.1' --header 'Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MDgzNDIzMzcsIlVpZCI6NCwiU3NpZCI6ImJiN2UwYmY0LTBlZTgtNDIyZS04MGYzLWM4ODYwMDQ1NGJhMCIsIlVzZXJBZ2VudCI6IlBvc3RtYW5SdW50aW1lLzcuMzYuMSJ9.dvBa8_ncihfdU8IiLSdPn9pzLnTvXNwTqM-FDau4exFlV3m_juSU0IkNN_vf2HFDobdNshiz6lSYeUKPAb-b0Q' http://127.0.0.1:8080/articles/pub/top-like
+```
+![img.png](10秒50并发.png)
+#### 10秒并发100，持续30秒
+```shell
+wrk -t10 -c100 -d30s --header 'User-Agent: PostmanRuntime/7.36.1' --header 'Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MDgzNDIzMzcsIlVpZCI6NCwiU3NpZCI6ImJiN2UwYmY0LTBlZTgtNDIyZS04MGYzLWM4ODYwMDQ1NGJhMCIsIlVzZXJBZ2VudCI6IlBvc3RtYW5SdW50aW1lLzcuMzYuMSJ9.dvBa8_ncihfdU8IiLSdPn9pzLnTvXNwTqM-FDau4exFlV3m_juSU0IkNN_vf2HFDobdNshiz6lSYeUKPAb-b0Q' http://127.0.0.1:8080/articles/pub/top-like
+```
+![img.png](10秒100并发.png)
+#### 10秒并发200，持续30秒
+```shell
+wrk -t10 -c200 -d30s --header 'User-Agent: PostmanRuntime/7.36.1' --header 'Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MDgzNDIzMzcsIlVpZCI6NCwiU3NpZCI6ImJiN2UwYmY0LTBlZTgtNDIyZS04MGYzLWM4ODYwMDQ1NGJhMCIsIlVzZXJBZ2VudCI6IlBvc3RtYW5SdW50aW1lLzcuMzYuMSJ9.dvBa8_ncihfdU8IiLSdPn9pzLnTvXNwTqM-FDau4exFlV3m_juSU0IkNN_vf2HFDobdNshiz6lSYeUKPAb-b0Q' http://127.0.0.1:8080/articles/pub/top-like
+```
+![img_1.png](10秒200并发.png)

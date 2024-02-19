@@ -44,7 +44,7 @@ func (m *JwtMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 		})
 		if err != nil {
 			// token不对
-			log.Println("解析token报错")
+			log.Println("解析token报错", err.Error())
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

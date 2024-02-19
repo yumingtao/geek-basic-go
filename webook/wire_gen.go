@@ -52,7 +52,12 @@ func InitWebServer() *App {
 	interactiveCache := cache.NewInteractiveRedisCache(cmdable)
 	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDao, loggerV1, interactiveCache)
 	interactiveService := service.NewInteractiveServiceImpl(interactiveRepository)
-	articleHandler := web.NewArticleHandler(articleService, interactiveService, loggerV1)
+	topLikedCache := cache.NewTopLikedRedisCache(cmdable)
+	topLikedLocalCache := cache.NewTopLikedLocalCache()
+	rlockClient := ioc.InitRLockClient(cmdable)
+	topLikedRepository := repository.NewCachedTopLikedRepository(interactiveDao, articleDao, topLikedCache, topLikedLocalCache, rlockClient, loggerV1)
+	topLikedService := service.NewTopLikedServiceImpl(topLikedRepository)
+	articleHandler := web.NewArticleHandler(articleService, interactiveService, topLikedService, loggerV1)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
 	interactiveReadEventConsumer := article.NewInteractiveReadEventConsumer(interactiveRepository, client, loggerV1)
 	v2 := ioc.InitConsumers(interactiveReadEventConsumer)
@@ -66,3 +71,5 @@ func InitWebServer() *App {
 // wire.go:
 
 var interactiveSvcSet = wire.NewSet(dao.NewGormInteractiveDao, cache.NewInteractiveRedisCache, repository.NewCachedInteractiveRepository, service.NewInteractiveServiceImpl)
+
+var topLikedSvcSet = wire.NewSet(cache.NewTopLikedRedisCache, cache.NewTopLikedLocalCache, ioc.InitRLockClient, repository.NewCachedTopLikedRepository, service.NewTopLikedServiceImpl)

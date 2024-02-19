@@ -17,10 +17,17 @@ type ArticleDao interface {
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error)
 	GetById(ctx context.Context, id int64) (Article, error)
 	GetPubById(ctx context.Context, id int64) (PublishedArticle, error)
+	GetPubByIds(ctx context.Context, ids []int64) ([]Article, error)
 }
 
 type ArticleGormDao struct {
 	db *gorm.DB
+}
+
+func (a *ArticleGormDao) GetPubByIds(ctx context.Context, ids []int64) ([]Article, error) {
+	var res []Article
+	err := a.db.WithContext(ctx).Where("id IN ?", ids).Find(&res).Error
+	return res, err
 }
 
 func (a *ArticleGormDao) GetPubById(ctx context.Context, id int64) (PublishedArticle, error) {

@@ -7,6 +7,7 @@ import (
 	"geek-basic-go/webook/internal/repository/cache"
 	"geek-basic-go/webook/internal/repository/dao"
 	"geek-basic-go/webook/pkg/logger"
+	"github.com/ecodeclub/ekit/slice"
 )
 
 type InteractiveRepository interface {
@@ -17,6 +18,7 @@ type InteractiveRepository interface {
 	Get(ctx context.Context, biz string, id int64) (domain.Interactive, error)
 	Liked(ctx context.Context, biz string, id int64, uid int64) (bool, error)
 	Collected(ctx context.Context, biz string, id int64, uid int64) (bool, error)
+	GetTopLiked(ctx context.Context, n int) ([]domain.Interactive, error)
 }
 
 type CachedInteractiveRepository struct {
@@ -32,6 +34,16 @@ func NewCachedInteractiveRepository(dao dao.InteractiveDao,
 		cache: cache,
 		l:     l,
 	}
+}
+
+func (c *CachedInteractiveRepository) GetTopLiked(ctx context.Context, n int) ([]domain.Interactive, error) {
+	intrs, err := c.dao.GetTopLikedList(ctx, n)
+	if err != nil {
+		return nil, err
+	}
+	return slice.Map[dao.Interactive, domain.Interactive](intrs, func(idx int, src dao.Interactive) domain.Interactive {
+		return c.toDomain(src)
+	}), nil
 }
 
 func (c *CachedInteractiveRepository) Get(ctx context.Context, biz string, id int64) (domain.Interactive, error) {
@@ -121,6 +133,7 @@ func (c *CachedInteractiveRepository) IncrReadCnt(ctx context.Context, biz strin
 
 func (c *CachedInteractiveRepository) toDomain(ie dao.Interactive) domain.Interactive {
 	return domain.Interactive{
+		BizId:      ie.BizId,
 		ReadCnt:    ie.ReadCnt,
 		LikeCnt:    ie.LikeCnt,
 		CollectCnt: ie.CollectCnt,

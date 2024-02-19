@@ -16,16 +16,19 @@ import (
 type ArticleHandler struct {
 	svc     service.ArticleService
 	intrSvc service.InteractiveService
+	tlSvc   service.TopLikedService
 	l       logger.LoggerV1
 	biz     string
 }
 
 func NewArticleHandler(svc service.ArticleService,
 	intrSvc service.InteractiveService,
+	tlsSvc service.TopLikedService,
 	l logger.LoggerV1) *ArticleHandler {
 	return &ArticleHandler{
 		svc:     svc,
 		intrSvc: intrSvc,
+		tlSvc:   tlsSvc,
 		l:       l,
 		biz:     "article",
 	}
@@ -41,10 +44,12 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	// List接口，一般是GET的，形如list?offset=?&limit=?, 这里定义成post，然后通过body接收参数
 	g.POST("/list", h.List)
 	g.GET("/detail/:id", h.Detail)
+
 	pub := g.Group("/pub")
 	pub.GET("/:id", h.PubDetail)
 	pub.POST("/like", h.Like)
 	pub.POST("/collect", h.Collect)
+	pub.GET("/top-like", h.ListTopLiked)
 }
 
 // Edit 返回article id
@@ -372,5 +377,24 @@ func (h *ArticleHandler) Collect(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "OK",
+	})
+}
+
+func (h *ArticleHandler) ListTopLiked(ctx *gin.Context) {
+	arts, err := h.tlSvc.GetTopLiked(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统异常",
+		})
+		h.l.Error("获取top N点赞文章失败", logger.Error(err))
+		return
+	}
+	res := slice.Map[domain.Article, ArticleVo](arts, func(idx int, src domain.Article) ArticleVo {
+		return toVo(src)
+	})
+	ctx.JSON(http.StatusOK, Result{
+		Data: res,
+		Msg:  "OK",
 	})
 }

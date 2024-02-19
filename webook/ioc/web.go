@@ -1,13 +1,9 @@
 package ioc
 
 import (
-	"context"
 	"geek-basic-go/webook/internal/web"
 	ijwt "geek-basic-go/webook/internal/web/jwt"
-	"geek-basic-go/webook/internal/web/middlewares/log"
 	"geek-basic-go/webook/internal/web/middlewares/login"
-	"geek-basic-go/webook/pkg/ginx/middleware/ratelimit"
-	"geek-basic-go/webook/pkg/limiter"
 	"geek-basic-go/webook/pkg/logger"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -63,16 +59,16 @@ func InitGinMiddlewares(redisClient redis.Cmdable, hdl ijwt.Handler, l logger.Lo
 			},
 			MaxAge: 12 * time.Hour,
 		}),
-		func(ctx *gin.Context) {
+		/*func(ctx *gin.Context) {
 			println("这个另一个middleware")
-		},
-		ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 100)).Build(),
-		log.NewLogMiddlewareBuilder(func(ctx context.Context, al log.AccessLog) {
+		},*/
+		//ratelimit.NewBuilder(limiter.NewRedisSlidingWindowLimiter(redisClient, time.Second, 100)).Build(),
+		/*log.NewLogMiddlewareBuilder(func(ctx context.Context, al log.AccessLog) {
 			l.Debug("", logger.Field{
 				Key: "req",
 				Val: al,
 			})
-		}).AllowReqBody().AllowRespBody().Build(),
+		}).AllowReqBody().AllowRespBody().Build(),*/
 		login.NewJwtMiddlewareBuilder(hdl).CheckLogin(),
 	}
 }
