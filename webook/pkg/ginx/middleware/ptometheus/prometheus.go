@@ -51,7 +51,7 @@ func (b *Builder) BuildResponseTime() gin.HandlerFunc {
 }
 
 func (b *Builder) BuildActiveRequest() gin.HandlerFunc {
-	guage := prometheus.NewGauge(prometheus.GaugeOpts{
+	gauge := prometheus.NewGauge(prometheus.GaugeOpts{
 		// 注意这三个字段都不能有 “_” 以外的其它符号
 		Namespace: b.Namespace,
 		Subsystem: b.Subsystem,
@@ -61,10 +61,10 @@ func (b *Builder) BuildActiveRequest() gin.HandlerFunc {
 			"instance_id": b.InstanceId,
 		},
 	})
-	prometheus.MustRegister(guage)
+	prometheus.MustRegister(gauge)
 	return func(ctx *gin.Context) {
-		guage.Inc()
-		defer guage.Dec()
+		gauge.Inc()
+		defer gauge.Dec()
 		ctx.Next()
 	}
 }
