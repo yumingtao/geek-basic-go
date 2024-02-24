@@ -16,6 +16,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	ginredis "github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -34,6 +35,7 @@ func main() {
 	//initViperRemote()
 	//initViperWatch()
 	initLogger()
+	initPrometheus()
 	app := InitWebServer()
 	for _, c := range app.consumers {
 		err := c.Start()
@@ -50,6 +52,17 @@ func main() {
 	if err != nil {
 		return
 	}
+}
+
+func initPrometheus() {
+	go func() {
+		// 给prometheus用的端口
+		http.Handle("/metrics", promhttp.Handler())
+		err := http.ListenAndServe(":8081", nil)
+		if err != nil {
+			panic(err)
+		}
+	}()
 }
 
 func initLogger() {
