@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"geek-basic-go/webook/internal/integration/startup"
-	"geek-basic-go/webook/internal/web"
+	"geek-basic-go/webook/pkg/ginx"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -35,7 +35,7 @@ func TestUserHandler_SendSmsCode(t *testing.T) {
 		after      func(t *testing.T)
 		phone      string
 		wantedCode int
-		wantedBody web.Result
+		wantedBody ginx.Result
 	}{
 		{
 			name: "发送成功",
@@ -59,7 +59,7 @@ func TestUserHandler_SendSmsCode(t *testing.T) {
 			},
 			phone:      "13813382231",
 			wantedCode: http.StatusOK,
-			wantedBody: web.Result{
+			wantedBody: ginx.Result{
 				Code: 0,
 				Msg:  "短信发送成功",
 				Data: nil,
@@ -76,7 +76,7 @@ func TestUserHandler_SendSmsCode(t *testing.T) {
 			},
 			phone:      "",
 			wantedCode: http.StatusOK,
-			wantedBody: web.Result{
+			wantedBody: ginx.Result{
 				Code: 4,
 				Msg:  "请输入正确手机号",
 				Data: nil,
@@ -105,7 +105,7 @@ func TestUserHandler_SendSmsCode(t *testing.T) {
 			},
 			phone:      "13813382231",
 			wantedCode: http.StatusOK,
-			wantedBody: web.Result{
+			wantedBody: ginx.Result{
 				Code: 4,
 				Msg:  "短信发送太频繁，请稍后再试",
 				Data: nil,
@@ -135,7 +135,7 @@ func TestUserHandler_SendSmsCode(t *testing.T) {
 			},
 			phone:      "13813382231",
 			wantedCode: http.StatusOK,
-			wantedBody: web.Result{
+			wantedBody: ginx.Result{
 				Code: 5,
 				Msg:  "系统错误",
 				Data: nil,
@@ -163,7 +163,7 @@ func TestUserHandler_SendSmsCode(t *testing.T) {
 			if tc.wantedCode != http.StatusOK {
 				return
 			}
-			var res web.Result
+			var res ginx.Result
 			err = json.NewDecoder(recorder.Body).Decode(&res)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.wantedBody, res)

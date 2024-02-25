@@ -14,7 +14,6 @@ import (
 	"geek-basic-go/webook/internal/web"
 	"geek-basic-go/webook/internal/web/jwt"
 	"geek-basic-go/webook/ioc"
-	"geek-basic-go/webook/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
 
@@ -38,8 +37,7 @@ func InitWebServer() *gin.Engine {
 	codeRepository := repository.NewCachedCodeRepository(codeCache)
 	smsService := ioc.InitSmsService()
 	codeService := service.NewCodeService(codeRepository, smsService)
-	errLogger := logger.NewErrLogger(loggerV1)
-	userHandler := web.NewUserHandler(userService, codeService, handler, errLogger)
+	userHandler := web.NewUserHandler(userService, codeService, handler, loggerV1)
 	wechatService := ioc.InitWechatService(loggerV1)
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler)

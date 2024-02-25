@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"geek-basic-go/webook/pkg/ginx"
+	l "geek-basic-go/webook/pkg/logger"
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/pflag"
@@ -34,6 +36,7 @@ func initLogger() {
 	if err != nil {
 		panic(err)
 	}
+	ginx.L = l.NewZapLogger(logger)
 	zap.ReplaceGlobals(logger)
 }
 
