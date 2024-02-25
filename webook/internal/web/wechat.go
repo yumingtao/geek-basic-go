@@ -5,6 +5,7 @@ import (
 	"geek-basic-go/webook/internal/service"
 	"geek-basic-go/webook/internal/service/oauth2/wechat"
 	ijwt "geek-basic-go/webook/internal/web/jwt"
+	"geek-basic-go/webook/pkg/ginx"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	uuid "github.com/lithammer/shortuuid/v4"
@@ -34,7 +35,7 @@ func (o *OAuth2WechatHandler) OAuth2Url(ctx *gin.Context) {
 	state := uuid.New()
 	url, err := o.svc.AuthUrl(ctx, state)
 	if err != nil {
-		ctx.JSON(http.StatusOK, Result{
+		ctx.JSON(http.StatusOK, ginx.Result{
 			Msg:  "构造跳转URL失败",
 			Code: 5,
 			Data: nil,
@@ -43,14 +44,14 @@ func (o *OAuth2WechatHandler) OAuth2Url(ctx *gin.Context) {
 	}
 	err = o.setStateCookie(ctx, state)
 	if err != nil {
-		ctx.JSON(http.StatusOK, Result{
+		ctx.JSON(http.StatusOK, ginx.Result{
 			Msg:  "构造跳转URL失败",
 			Code: 5,
 			Data: nil,
 		})
 		return
 	}
-	ctx.JSON(http.StatusOK, Result{
+	ctx.JSON(http.StatusOK, ginx.Result{
 		Data: url,
 	})
 }
@@ -59,7 +60,7 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 	// 校验state
 	err := o.verifyState(ctx)
 	if err != nil {
-		ctx.JSON(http.StatusOK, Result{
+		ctx.JSON(http.StatusOK, ginx.Result{
 			Msg:  "非法请求",
 			Code: 4,
 		})
@@ -69,7 +70,7 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 	code := ctx.Query("code")
 	wechatInfo, err := o.svc.VerifyCode(ctx, code)
 	if err != nil {
-		ctx.JSON(http.StatusOK, Result{
+		ctx.JSON(http.StatusOK, ginx.Result{
 			Msg:  "授权码有误",
 			Code: 4,
 		})
@@ -78,7 +79,7 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 	// 登录或注册逻辑（用户可能第一次登录）
 	u, err := o.userSvc.FindOrCreatedByWechat(ctx, wechatInfo)
 	if err != nil {
-		ctx.JSON(http.StatusOK, Result{
+		ctx.JSON(http.StatusOK, ginx.Result{
 			Msg:  "系统错误",
 			Code: 5,
 		})
@@ -89,7 +90,7 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
-	ctx.JSON(http.StatusOK, Result{
+	ctx.JSON(http.StatusOK, ginx.Result{
 		Msg: "OK",
 	})
 }
