@@ -26,6 +26,10 @@ services:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+  zipkin:
+    image: openzipkin/zipkin-slim:latest
+    ports:
+      - "9411:9411"
   mogo:
     image: "mongo:7.0"
     restart: always
