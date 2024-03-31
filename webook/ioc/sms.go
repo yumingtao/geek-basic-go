@@ -13,6 +13,7 @@ import (
 func InitSmsService() sms.Service {
 	// 如何使用装饰器
 	//return ratelimit.NewLimitSmsService(localsms.NewService(), limiter.NewRedisSlidingWindowLimiter())
+	//return opentelemetry.NewOtelSmsService(localsms.NewService(), NewTracer())
 	return localsms.NewService()
 	// 此处可以换成不同的实现
 	//return InitTencentSmsService()

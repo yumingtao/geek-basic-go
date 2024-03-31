@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"geek-basic-go/webook/ioc"
 	"geek-basic-go/webook/pkg/ginx"
 	l "geek-basic-go/webook/pkg/logger"
 	"github.com/fsnotify/fsnotify"
@@ -22,6 +24,12 @@ func main() {
 	//initViperWatch()
 	initLogger()
 	initPrometheus()
+	tpCancel := ioc.InitOTEL()
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+		tpCancel(ctx)
+	}()
 	app := InitWebServer()
 	for _, c := range app.consumers {
 		err := c.Start()

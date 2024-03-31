@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
+	otelgin "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"strings"
 	"time"
 )
@@ -76,6 +77,7 @@ func InitGinMiddlewares(redisClient redis.Cmdable, hdl ijwt.Handler, l logger.Lo
 		}),
 		pb.BuildResponseTime(),
 		pb.BuildActiveRequest(),
+		otelgin.Middleware("webook"),
 		/*func(ctx *gin.Context) {
 			println("这个另一个middleware")
 		},*/

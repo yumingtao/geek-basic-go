@@ -27,16 +27,19 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.814
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.814
 	go.mongodb.org/mongo-driver v1.9.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.49.0
 	go.opentelemetry.io/otel v1.24.0
 	go.opentelemetry.io/otel/exporters/zipkin v1.24.0
 	go.opentelemetry.io/otel/sdk v1.24.0
+	go.opentelemetry.io/otel/trace v1.24.0
 	go.uber.org/mock v0.3.0
 	go.uber.org/zap v1.21.0
-	golang.org/x/crypto v0.16.0
+	golang.org/x/crypto v0.19.0
 	golang.org/x/sync v0.5.0
 	gorm.io/driver/mysql v1.5.2
 	gorm.io/driver/sqlite v1.5.4
 	gorm.io/gorm v1.25.5
+	gorm.io/plugin/opentelemetry v0.1.4
 	gorm.io/plugin/prometheus v0.1.0
 )
 
@@ -142,12 +145,11 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.10 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
-	go.opentelemetry.io/otel/trace v1.24.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
 	golang.org/x/oauth2 v0.15.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
@@ -159,7 +161,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20231106174013-bbf56f31fb17 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231120223509-83a465c0220f // indirect
 	google.golang.org/grpc v1.59.0 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

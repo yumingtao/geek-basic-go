@@ -172,7 +172,7 @@ func (h *UserHandler) SignUp(ctx *gin.Context, req SignUpReq) (ginx.Result, erro
 		}, err
 	}
 
-	err = h.svc.SignUp(ctx, domain.User{
+	err = h.svc.SignUp(ctx.Request.Context(), domain.User{
 		Email:    req.Email,
 		Password: req.Password,
 	})
