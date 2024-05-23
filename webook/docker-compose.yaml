@@ -20,6 +20,16 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - "6379:6379"
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+  zipkin:
+    image: openzipkin/zipkin-slim:latest
+    ports:
+      - "9411:9411"
   mogo:
     image: "mongo:7.0"
     restart: always
@@ -50,3 +60,7 @@ services:
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+  grafana:
+    image: grafana/grafana-enterprise:10.2.0
+    ports:
+      - '3000:3000'

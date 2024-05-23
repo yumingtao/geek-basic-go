@@ -38,7 +38,7 @@ func InitWebServer() *App {
 	codeRepository := repository.NewCachedCodeRepository(codeCache)
 	smsService := ioc.InitSmsService()
 	codeService := service.NewCodeService(codeRepository, smsService)
-	userHandler := web.NewUserHandler(userService, codeService, handler)
+	userHandler := web.NewUserHandler(userService, codeService, handler, loggerV1)
 	wechatService := ioc.InitWechatService(loggerV1)
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
 	articleDao := dao.NewGormDBArticleDao(db)
